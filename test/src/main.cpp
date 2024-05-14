@@ -12,8 +12,7 @@ using namespace std;
 // 其次, 因为这个文件不是我们自己写的, 而是被 Bison 生成出来的
 // 你的代码编辑器/IDE 很可能找不到这个文件, 然后会给你报错 (虽然编译不会出错)
 // 看起来会很烦人, 于是干脆采用这种看起来 dirty 但实际很有效的手段
-
-struct sym_node *sym_head=nullptr, *sym_tail=nullptr, *sym_cur=nullptr;
+sym_node *sym_head=nullptr, *sym_tail=nullptr, *sym_cur=nullptr;
 
 extern FILE *yyin;
 extern int yyparse(std::unique_ptr<BaseAST> &ast);

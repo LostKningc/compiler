@@ -34,8 +34,8 @@
 /* Undocumented macros, especially those whose name start with YY_,
    are private implementation details.  Do not rely on them.  */
 
-#ifndef YY_YY_ROOT_COMPILE_SRC_TEST_BUILD_SYSY_TAB_HPP_INCLUDED
-# define YY_YY_ROOT_COMPILE_SRC_TEST_BUILD_SYSY_TAB_HPP_INCLUDED
+#ifndef YY_YY_ROOT_COMPILE_COMPILER_TEST_BUILD_SYSY_TAB_HPP_INCLUDED
+# define YY_YY_ROOT_COMPILE_COMPILER_TEST_BUILD_SYSY_TAB_HPP_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -44,14 +44,14 @@
 extern int yydebug;
 #endif
 /* "%code requires" blocks.  */
-#line 2 "/root/compile/src/test/src/sysy.y"
+#line 2 "/root/compile/Compiler/test/src/sysy.y"
 
   #include <memory>
   #include <string>
   #include "ast.hpp"
   #include "variable.hpp"
 
-#line 55 "/root/compile/src/test/build/sysy.tab.hpp"
+#line 55 "/root/compile/Compiler/test/build/sysy.tab.hpp"
 
 /* Token type.  */
 #ifndef YYTOKENTYPE
@@ -71,13 +71,13 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 31 "/root/compile/src/test/src/sysy.y"
+#line 31 "/root/compile/Compiler/test/src/sysy.y"
 
   std::string *str_val;
   int int_val;
   BaseAST *ast_val;
 
-#line 81 "/root/compile/src/test/build/sysy.tab.hpp"
+#line 81 "/root/compile/Compiler/test/build/sysy.tab.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -90,4 +90,4 @@ extern YYSTYPE yylval;
 
 int yyparse (std::unique_ptr<BaseAST> &ast);
 
-#endif /* !YY_YY_ROOT_COMPILE_SRC_TEST_BUILD_SYSY_TAB_HPP_INCLUDED  */
+#endif /* !YY_YY_ROOT_COMPILE_COMPILER_TEST_BUILD_SYSY_TAB_HPP_INCLUDED  */

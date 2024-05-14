@@ -55,6 +55,7 @@ OBJS := $(patsubst $(BUILD_DIR)/%.cc, $(BUILD_DIR)/%.cc.o, $(OBJS))
 # Header directories & dependencies
 INC_DIRS := $(shell find $(SRC_DIR) -type d)
 INC_DIRS += $(INC_DIRS:$(SRC_DIR)%=$(BUILD_DIR)%)
+INC_DIRS += include
 INC_FLAGS := $(addprefix -I, $(INC_DIRS))
 DEPS := $(OBJS:.o=.d)
 CPPFLAGS = $(INC_FLAGS) -MMD -MP

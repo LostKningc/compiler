@@ -1,11 +1,10 @@
-/root/compile/src/test/build/sysy.lex.cpp.o: \
-  /root/compile/src/test/src/sysy.lex.cpp \
-  /root/compile/src/test/build/sysy.tab.hpp \
-  /root/compile/src/test/src/ast.hpp \
-  /root/compile/src/test/src/variable.hpp
+/root/compile/Compiler/test/build/sysy.lex.cpp.o: \
+  /root/compile/Compiler/test/build/sysy.lex.cpp \
+  /root/compile/Compiler/test/build/sysy.tab.hpp include/ast.hpp \
+  include/variable.hpp
 
-/root/compile/src/test/build/sysy.tab.hpp:
+/root/compile/Compiler/test/build/sysy.tab.hpp:
 
-/root/compile/src/test/src/ast.hpp:
+include/ast.hpp:
 
-/root/compile/src/test/src/variable.hpp:
+include/variable.hpp:

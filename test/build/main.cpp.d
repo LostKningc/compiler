@@ -1,8 +1,7 @@
-/root/compile/src/test/build/main.cpp.o: \
-  /root/compile/src/test/src/main.cpp \
-  /root/compile/src/test/src/variable.hpp \
-  /root/compile/src/test/src/ast.hpp
+/root/compile/Compiler/test/build/main.cpp.o: \
+  /root/compile/Compiler/test/src/main.cpp include/variable.hpp \
+  include/ast.hpp
 
-/root/compile/src/test/src/variable.hpp:
+include/variable.hpp:
 
-/root/compile/src/test/src/ast.hpp:
+include/ast.hpp:

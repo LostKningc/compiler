@@ -66,7 +66,7 @@
 
 
 /* First part of user prologue.  */
-#line 9 "/root/compile/src/test/src/sysy.y"
+#line 9 "/root/compile/Compiler/test/src/sysy.y"
 
 
 #include <iostream>
@@ -84,7 +84,7 @@ using namespace std;
 extern sym_node *sym_head, *sym_tail, *sym_cur;
 
 
-#line 88 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 88 "/root/compile/Compiler/test/build/sysy.tab.cpp"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -117,8 +117,8 @@ extern sym_node *sym_head, *sym_tail, *sym_cur;
 
 /* Use api.header.include to #include this header
    instead of duplicating it here.  */
-#ifndef YY_YY_ROOT_COMPILE_SRC_TEST_BUILD_SYSY_TAB_HPP_INCLUDED
-# define YY_YY_ROOT_COMPILE_SRC_TEST_BUILD_SYSY_TAB_HPP_INCLUDED
+#ifndef YY_YY_ROOT_COMPILE_COMPILER_TEST_BUILD_SYSY_TAB_HPP_INCLUDED
+# define YY_YY_ROOT_COMPILE_COMPILER_TEST_BUILD_SYSY_TAB_HPP_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -127,14 +127,14 @@ extern sym_node *sym_head, *sym_tail, *sym_cur;
 extern int yydebug;
 #endif
 /* "%code requires" blocks.  */
-#line 2 "/root/compile/src/test/src/sysy.y"
+#line 2 "/root/compile/Compiler/test/src/sysy.y"
 
   #include <memory>
   #include <string>
   #include "ast.hpp"
   #include "variable.hpp"
 
-#line 138 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 138 "/root/compile/Compiler/test/build/sysy.tab.cpp"
 
 /* Token type.  */
 #ifndef YYTOKENTYPE
@@ -154,13 +154,13 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 31 "/root/compile/src/test/src/sysy.y"
+#line 31 "/root/compile/Compiler/test/src/sysy.y"
 
   std::string *str_val;
   int int_val;
   BaseAST *ast_val;
 
-#line 164 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 164 "/root/compile/Compiler/test/build/sysy.tab.cpp"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -173,7 +173,7 @@ extern YYSTYPE yylval;
 
 int yyparse (std::unique_ptr<BaseAST> &ast);
 
-#endif /* !YY_YY_ROOT_COMPILE_SRC_TEST_BUILD_SYSY_TAB_HPP_INCLUDED  */
+#endif /* !YY_YY_ROOT_COMPILE_COMPILER_TEST_BUILD_SYSY_TAB_HPP_INCLUDED  */
 
 
 
@@ -1381,59 +1381,59 @@ yyreduce:
   switch (yyn)
     {
   case 2:
-#line 52 "/root/compile/src/test/src/sysy.y"
+#line 52 "/root/compile/Compiler/test/src/sysy.y"
            {
    auto comp_unit = make_unique<CompUnitAST>();
    comp_unit->start = unique_ptr<BaseAST>((yyvsp[0].ast_val));
    ast = move(comp_unit);
  }
-#line 1391 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1391 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 3:
-#line 59 "/root/compile/src/test/src/sysy.y"
+#line 59 "/root/compile/Compiler/test/src/sysy.y"
                     {
     auto ast = new DefUnitsAST();
     ast->def_units = unique_ptr<BaseAST>((yyvsp[-1].ast_val));
     ast->def_unit = unique_ptr<BaseAST>((yyvsp[0].ast_val));
     (yyval.ast_val) = ast;
   }
-#line 1402 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1402 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 4:
-#line 64 "/root/compile/src/test/src/sysy.y"
+#line 64 "/root/compile/Compiler/test/src/sysy.y"
             {
     auto ast = new DefUnitsAST();
     ast->def_units = nullptr;
     ast->def_unit = unique_ptr<BaseAST>((yyvsp[0].ast_val));
     (yyval.ast_val) = ast;
   }
-#line 1413 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1413 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 5:
-#line 73 "/root/compile/src/test/src/sysy.y"
+#line 73 "/root/compile/Compiler/test/src/sysy.y"
             {
     auto ast = new DefUnitAST();
     ast->content = unique_ptr<BaseAST>((yyvsp[0].ast_val));
     (yyval.ast_val)=ast;
   }
-#line 1423 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1423 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 6:
-#line 78 "/root/compile/src/test/src/sysy.y"
+#line 78 "/root/compile/Compiler/test/src/sysy.y"
         {
     auto  ast = new DefUnitAST();
     ast->content = unique_ptr<BaseAST>((yyvsp[0].ast_val));
     (yyval.ast_val)=ast;
   }
-#line 1433 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1433 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 7:
-#line 87 "/root/compile/src/test/src/sysy.y"
+#line 87 "/root/compile/Compiler/test/src/sysy.y"
                                         {
     auto ast=new FuncDefAST();
     ast->type = unique_ptr<BaseAST>((yyvsp[-4].ast_val));
@@ -1441,97 +1441,97 @@ yyreduce:
     ast->block = unique_ptr<BaseAST>((yyvsp[0].ast_val));
     (yyval.ast_val)=ast;
   }
-#line 1445 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1445 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 8:
-#line 99 "/root/compile/src/test/src/sysy.y"
+#line 99 "/root/compile/Compiler/test/src/sysy.y"
               {
     auto ast = new DeclarationTypeAST();
     ast->type = unique_ptr<string>((yyvsp[0].str_val));
     (yyval.ast_val) = ast;
   }
-#line 1455 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1455 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 9:
-#line 107 "/root/compile/src/test/src/sysy.y"
+#line 107 "/root/compile/Compiler/test/src/sysy.y"
                {
   (yyval.str_val) = new string("int");
 }
-#line 1463 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1463 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 10:
-#line 110 "/root/compile/src/test/src/sysy.y"
+#line 110 "/root/compile/Compiler/test/src/sysy.y"
        {
     (yyval.str_val) = new string("void");
   }
-#line 1471 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1471 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 11:
-#line 113 "/root/compile/src/test/src/sysy.y"
+#line 113 "/root/compile/Compiler/test/src/sysy.y"
         {
     (yyval.str_val) = new string("float");
   }
-#line 1479 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1479 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 12:
-#line 119 "/root/compile/src/test/src/sysy.y"
+#line 119 "/root/compile/Compiler/test/src/sysy.y"
                  {
     auto ast=new BlockAST();
     ast->stmt = unique_ptr<BaseAST>((yyvsp[-1].ast_val));
     (yyval.ast_val)=ast;
   }
-#line 1489 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1489 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 13:
-#line 127 "/root/compile/src/test/src/sysy.y"
+#line 127 "/root/compile/Compiler/test/src/sysy.y"
           {
     auto ast = new StmtAST();
     ast->sents = unique_ptr<BaseAST>((yyvsp[0].ast_val));
     (yyval.ast_val) = ast;
   }
-#line 1499 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1499 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 14:
-#line 135 "/root/compile/src/test/src/sysy.y"
+#line 135 "/root/compile/Compiler/test/src/sysy.y"
              {
     auto ast= new SentsAST();
     ast->sents = unique_ptr<BaseAST>((yyvsp[-1].ast_val));
     ast->sent=unique_ptr<BaseAST>((yyvsp[0].ast_val));
     (yyval.ast_val)=ast;
   }
-#line 1510 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1510 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 15:
-#line 141 "/root/compile/src/test/src/sysy.y"
+#line 141 "/root/compile/Compiler/test/src/sysy.y"
          {
       auto ast = new SentsAST();
       ast->sents = nullptr;
       ast->sent = unique_ptr<BaseAST>((yyvsp[0].ast_val));
       (yyval.ast_val) = ast;
     }
-#line 1521 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1521 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 16:
-#line 151 "/root/compile/src/test/src/sysy.y"
+#line 151 "/root/compile/Compiler/test/src/sysy.y"
                   {
     auto ast =new SentAST();
     ast->content = unique_ptr<BaseAST>((yyvsp[-1].ast_val));
     (yyval.ast_val)=ast;
   }
-#line 1531 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1531 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 17:
-#line 156 "/root/compile/src/test/src/sysy.y"
+#line 156 "/root/compile/Compiler/test/src/sysy.y"
                   {
     auto ast = new SentAST();
     auto retAst=new ReturnAST();
@@ -1539,192 +1539,192 @@ yyreduce:
     ast->content=unique_ptr<BaseAST>(retAst);
     (yyval.ast_val)=ast;
   }
-#line 1543 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1543 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 18:
-#line 163 "/root/compile/src/test/src/sysy.y"
+#line 163 "/root/compile/Compiler/test/src/sysy.y"
                       {
     auto ast = new SentAST();
     ast->content = unique_ptr<BaseAST>((yyvsp[-1].ast_val));
     (yyval.ast_val)=ast;
   }
-#line 1553 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1553 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 19:
-#line 171 "/root/compile/src/test/src/sysy.y"
+#line 171 "/root/compile/Compiler/test/src/sysy.y"
             {
     (yyval.int_val) = (yyvsp[0].int_val);
   }
-#line 1561 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1561 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 20:
-#line 174 "/root/compile/src/test/src/sysy.y"
+#line 174 "/root/compile/Compiler/test/src/sysy.y"
                   {
     (yyval.int_val)=((yyvsp[-2].int_val)>(yyvsp[0].int_val));
   }
-#line 1569 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1569 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 21:
-#line 177 "/root/compile/src/test/src/sysy.y"
+#line 177 "/root/compile/Compiler/test/src/sysy.y"
                    {
     (yyval.int_val)=((yyvsp[-2].int_val)<(yyvsp[0].int_val));
   }
-#line 1577 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1577 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 22:
-#line 180 "/root/compile/src/test/src/sysy.y"
+#line 180 "/root/compile/Compiler/test/src/sysy.y"
                       {
     (yyval.int_val)=((yyvsp[-3].int_val)>=(yyvsp[0].int_val));
   }
-#line 1585 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1585 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 23:
-#line 183 "/root/compile/src/test/src/sysy.y"
+#line 183 "/root/compile/Compiler/test/src/sysy.y"
                       {
     (yyval.int_val)=((yyvsp[-3].int_val)<=(yyvsp[0].int_val));
   }
-#line 1593 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1593 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 24:
-#line 186 "/root/compile/src/test/src/sysy.y"
+#line 186 "/root/compile/Compiler/test/src/sysy.y"
                       {
     (yyval.int_val)=((yyvsp[-3].int_val)==(yyvsp[0].int_val));
   }
-#line 1601 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1601 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 25:
-#line 189 "/root/compile/src/test/src/sysy.y"
+#line 189 "/root/compile/Compiler/test/src/sysy.y"
                       {
     (yyval.int_val)=((yyvsp[-3].int_val)!=(yyvsp[0].int_val));
   }
-#line 1609 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1609 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 26:
-#line 195 "/root/compile/src/test/src/sysy.y"
+#line 195 "/root/compile/Compiler/test/src/sysy.y"
                          {
     (yyval.int_val)=(yyvsp[-2].int_val)+(yyvsp[0].int_val);
   }
-#line 1617 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1617 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 27:
-#line 198 "/root/compile/src/test/src/sysy.y"
+#line 198 "/root/compile/Compiler/test/src/sysy.y"
                            {
     (yyval.int_val)=(yyvsp[-2].int_val)-(yyvsp[0].int_val);
   }
-#line 1625 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1625 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 28:
-#line 201 "/root/compile/src/test/src/sysy.y"
+#line 201 "/root/compile/Compiler/test/src/sysy.y"
                {
     (yyval.int_val)=(yyvsp[0].int_val);
   }
-#line 1633 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1633 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 29:
-#line 207 "/root/compile/src/test/src/sysy.y"
+#line 207 "/root/compile/Compiler/test/src/sysy.y"
                             {
     (yyval.int_val)=(yyvsp[-2].int_val)*(yyvsp[0].int_val);
   }
-#line 1641 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1641 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 30:
-#line 210 "/root/compile/src/test/src/sysy.y"
+#line 210 "/root/compile/Compiler/test/src/sysy.y"
                               {
     (yyval.int_val)=(yyvsp[-2].int_val)/(yyvsp[0].int_val);
   }
-#line 1649 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1649 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 31:
-#line 213 "/root/compile/src/test/src/sysy.y"
+#line 213 "/root/compile/Compiler/test/src/sysy.y"
                               {
     (yyval.int_val)=(yyvsp[-2].int_val)%(yyvsp[0].int_val);
   }
-#line 1657 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1657 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 32:
-#line 216 "/root/compile/src/test/src/sysy.y"
+#line 216 "/root/compile/Compiler/test/src/sysy.y"
               {
     (yyval.int_val)=(yyvsp[0].int_val);
   }
-#line 1665 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1665 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 33:
-#line 222 "/root/compile/src/test/src/sysy.y"
+#line 222 "/root/compile/Compiler/test/src/sysy.y"
                {
     (yyval.int_val)=(yyvsp[-1].int_val);
   }
-#line 1673 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1673 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 34:
-#line 225 "/root/compile/src/test/src/sysy.y"
+#line 225 "/root/compile/Compiler/test/src/sysy.y"
           {
     (yyval.int_val)=(yyvsp[0].int_val);
   }
-#line 1681 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1681 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 35:
-#line 227 "/root/compile/src/test/src/sysy.y"
+#line 227 "/root/compile/Compiler/test/src/sysy.y"
          {
     int num=0;
     get_sym_val(sym_head,*((yyvsp[0].str_val)),&num);
     (yyval.int_val)=num;
   }
-#line 1691 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1691 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 36:
-#line 235 "/root/compile/src/test/src/sysy.y"
+#line 235 "/root/compile/Compiler/test/src/sysy.y"
                                {
     auto ast = new DeclarationlistAST();
     ast->type = unique_ptr<BaseAST>((yyvsp[-1].ast_val));
     ast->decls = unique_ptr<BaseAST>((yyvsp[0].ast_val));
     (yyval.ast_val) = ast;
   }
-#line 1702 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1702 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 37:
-#line 244 "/root/compile/src/test/src/sysy.y"
+#line 244 "/root/compile/Compiler/test/src/sysy.y"
                                {
     auto ast = new DeclarationsAST();
     ast->decls = unique_ptr<BaseAST>((yyvsp[-2].ast_val));
     ast->decl = unique_ptr<BaseAST>((yyvsp[0].ast_val));
     (yyval.ast_val) = ast;
   }
-#line 1713 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1713 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 38:
-#line 249 "/root/compile/src/test/src/sysy.y"
+#line 249 "/root/compile/Compiler/test/src/sysy.y"
                 {
     auto ast = new DeclarationsAST();
     ast->decls = nullptr;
     ast->decl = unique_ptr<BaseAST>((yyvsp[0].ast_val));
     (yyval.ast_val) = ast;
   }
-#line 1724 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1724 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 39:
-#line 258 "/root/compile/src/test/src/sysy.y"
+#line 258 "/root/compile/Compiler/test/src/sysy.y"
         {
     auto ast = new DeclarationAST();
     ast->ident = *((yyvsp[0].str_val));
@@ -1732,11 +1732,11 @@ yyreduce:
     ast->value = 0;
     (yyval.ast_val) = ast;
   }
-#line 1736 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1736 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 40:
-#line 265 "/root/compile/src/test/src/sysy.y"
+#line 265 "/root/compile/Compiler/test/src/sysy.y"
                  {
     auto ast = new DeclarationAST();
     ast->ident = *((yyvsp[-2].str_val));
@@ -1744,11 +1744,11 @@ yyreduce:
     ast->value = (yyvsp[0].int_val);
     (yyval.ast_val) = ast;
   }
-#line 1748 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1748 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 41:
-#line 275 "/root/compile/src/test/src/sysy.y"
+#line 275 "/root/compile/Compiler/test/src/sysy.y"
                         {
     auto assignsAst = new AssignsAST();
     auto assignAst= new AssignAST();
@@ -1759,22 +1759,22 @@ yyreduce:
     set_sym_val(sym_head,sym_tail,*((yyvsp[-2].str_val)),assignAst->value);
     (yyval.ast_val)=assignsAst;
   }
-#line 1763 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1763 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 42:
-#line 285 "/root/compile/src/test/src/sysy.y"
+#line 285 "/root/compile/Compiler/test/src/sysy.y"
              {
     auto ast = new AssignsAST();
     ast->assigns=nullptr;
     ast->assign=unique_ptr<BaseAST>((yyvsp[0].ast_val));
     (yyval.ast_val)=ast;
   }
-#line 1774 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1774 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 43:
-#line 294 "/root/compile/src/test/src/sysy.y"
+#line 294 "/root/compile/Compiler/test/src/sysy.y"
                  {
     auto ast=new AssignAST();
     ast->ident=*((yyvsp[-2].str_val));
@@ -1782,19 +1782,19 @@ yyreduce:
     set_sym_val(sym_head,sym_tail,*((yyvsp[-2].str_val)),(yyvsp[0].int_val));
     (yyval.ast_val)=ast;
   }
-#line 1786 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1786 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
   case 44:
-#line 304 "/root/compile/src/test/src/sysy.y"
+#line 304 "/root/compile/Compiler/test/src/sysy.y"
               {
     (yyval.int_val) = (yyvsp[0].int_val);
   }
-#line 1794 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1794 "/root/compile/Compiler/test/build/sysy.tab.cpp"
     break;
 
 
-#line 1798 "/root/compile/src/test/build/sysy.tab.cpp"
+#line 1798 "/root/compile/Compiler/test/build/sysy.tab.cpp"
 
       default: break;
     }
@@ -2026,7 +2026,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 308 "/root/compile/src/test/src/sysy.y"
+#line 308 "/root/compile/Compiler/test/src/sysy.y"
 
 
 void yyerror(std::unique_ptr<BaseAST> &ast,std::string s) {
