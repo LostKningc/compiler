@@ -16,7 +16,9 @@ using namespace std;
 
 
 WhiteSpace    [ \t\n\r]*
-LineComment   "//".*
+LineComment   "//".* 
+MulLineComment  "/*".*"*/"
+
 
 
 Identifier    [a-zA-Z_][a-zA-Z0-9_]*
@@ -31,6 +33,7 @@ Operater   "+"|"-"|"*"|"/"|"="|">"|"<"|"!"
 
 {WhiteSpace}    { }
 {LineComment}   { }
+{MulLineComment} { }
 
 "int"           { return INT; }
 "return"        { return RETURN; }

@@ -1,18 +1,18 @@
 #include "ast.hpp"
 #include <iostream>
 void CompUnitAST::dump() {
-    std::cout<<"Compunit { \n";
+    //std::cout<<"Compunit { \n";
     start->dump();
-    std::cout<<" \n";
-    std::cout<<" }";
-    std::cout<<std::endl;
+    // std::cout<<" \n";
+    // std::cout<<" }";
+    // std::cout<<std::endl;
 }
 
 void DefUnitsAST::dump() {
     if(def_units!=nullptr)
     {
         def_units->dump();
-        std::cout<<"\n";
+        //std::cout<<"\n";
     }
     def_unit->dump();
 }
@@ -24,84 +24,86 @@ void DefUnitAST::dump() {
 }
 
 void FuncDefAST::dump() {
-    std::cout<<"FuncDef { ";
+    //std::cout<<"FuncDef { ";
+    std::cout<<"fun @"<<ident<<"():";
     type->dump();
-    std::cout<<","<<ident<<",";
+    //std::cout<<","<<ident<<",";
     block->dump();
-    std::cout<<" }";
+    //std::cout<<" }";
 }
 
 void DeclarationTypeAST::dump() {
-    std::cout<<"DeclarationType { ";
+    //std::cout<<"DeclarationType { ";
     std::cout<<*type<<" ";
-    std::cout<<"}";
+    //std::cout<<"}";
 }
 
 void BlockAST::dump() {
-    std::cout<<"Block { ";
+    std::cout<<"{ ";
     stmt->dump();
     std::cout<<" }";
 }
 
 void StmtAST::dump() {
-    std::cout<<"Stmt { ";
+    std::cout<<"\%entry:";
+
     sents->dump();
-    std::cout<<" }";
 }
 
 void SentsAST::dump() {
     if(sents!=nullptr)
     {
         sents->dump();
-        std::cout<<",";
+        // std::cout<<"\n";
+        std::cout<<" ";
     }
     sent->dump();
 }
 
 void SentAST::dump() {
-    std::cout<<"Sent { ";
+    //std::cout<<"Sent { ";
     content->dump();
-    std::cout<<" }";
+    //std::cout<<" }";
 }
 
 void DeclarationlistAST::dump() {
-    std::cout<<"Declarationlist { ";
-    type->dump();
-    std::cout<<", Declarations { ";
-    decls->dump();
-    std::cout<<" }";
-    std::cout<<" }";
+    // std::cout<<"Declarationlist { ";
+    // type->dump();
+    // std::cout<<", Declarations { ";
+    // decls->dump();
+    // std::cout<<" }";
+    // std::cout<<" }";
 }
 
 void DeclarationsAST::dump() {
-    if(decls!=nullptr)
-        std::cout<<",";
-    decl->dump();
+    // if(decls!=nullptr)
+    //     std::cout<<",";
+    // decl->dump();
 }
 
 void DeclarationAST::dump() {
-    std::cout<<"Declaration { ";
-    std::cout<<ident<<"("<<value<<")";
-    std::cout<<" }";
+    // std::cout<<"Declaration { ";
+    // std::cout<<ident<<"("<<value<<")";
+    // std::cout<<" }";
 }
 
 
 void AssignsAST::dump() {
-    if(assigns!=nullptr)
-    {
-        assigns->dump();
-        std::cout<<",";
-    }
-    assign->dump();
+    // if(assigns!=nullptr)
+    // {
+    //     assigns->dump();
+    //     std::cout<<",";
+    // }
+    // assign->dump();
 }
 
 void AssignAST::dump() {
-    std::cout<<"Assign { ";
-    std::cout<<ident<<"("<<value<<")";
-    std::cout<<" }";
+    // std::cout<<"Assign { ";
+    // std::cout<<ident<<"("<<value<<")";
+    // std::cout<<" }";
 }
 
 void ReturnAST::dump() {
-    std::cout<<"Return { "<<retNum<<" }";
+    std::cout<<"ret "<<retNum;
 }
 

@@ -50,8 +50,9 @@ extern int yydebug;
   #include <string>
   #include "ast.hpp"
   #include "variable.hpp"
+  #include <cstring>
 
-#line 55 "/root/compile/Compiler/test/build/sysy.tab.hpp"
+#line 56 "/root/compile/Compiler/test/build/sysy.tab.hpp"
 
 /* Token type.  */
 #ifndef YYTOKENTYPE
@@ -71,13 +72,13 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 31 "/root/compile/Compiler/test/src/sysy.y"
+#line 33 "/root/compile/Compiler/test/src/sysy.y"
 
   std::string *str_val;
   int int_val;
   BaseAST *ast_val;
 
-#line 81 "/root/compile/Compiler/test/build/sysy.tab.hpp"
+#line 82 "/root/compile/Compiler/test/build/sysy.tab.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

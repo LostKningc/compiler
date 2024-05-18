@@ -4,6 +4,7 @@
   #include <string>
   #include "ast.hpp"
   #include "variable.hpp"
+  #include <cstring>
 }
 
 %{
@@ -11,6 +12,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <cstring>
 
 #include "ast.hpp"
 #include "variable.hpp"
@@ -105,7 +107,7 @@ DeclarationType
 
 
 BasicType: INT {
-  $$ = new string("int");
+  $$ = new string("i32");
 }|
   VOID {
     $$ = new string("void");
@@ -308,5 +310,14 @@ Number
 %%
 
 void yyerror(std::unique_ptr<BaseAST> &ast,std::string s) {
-  cerr << "error: " << s << endl;
+  extern int yylineno; //define and maintained in lex
+  extern char *yytext; //define and maintained in lex
+  int len = strlen(yytext);
+  int i;
+  char buf[512]={0};
+  for(i=0;i<len;++i){
+    sprintf(buf,"%s%d",buf,yytext[i]);
+  }
+  fprintf(stderr, "Error: %s at symbol '%s' on line %d\n", s.c_str(), buf,yylineno);
+  
 }

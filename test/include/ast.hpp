@@ -1,3 +1,4 @@
+#pragma once
 #ifndef AST_HPP
 #define AST_HPP
 
