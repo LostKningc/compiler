@@ -1,1 +1,2 @@
-g++ *.cpp -L$CDE_LIBRARY_PATH/native -lkoopa
+all:
+	g++ *.cpp -L$CDE_LIBRARY_PATH/native -lkoopa
