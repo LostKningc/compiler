@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "d:/docker/share/Compiler/test",
-      "program": "d:/docker/share/Compiler/test/build/Debug/outDebug",
+      "cwd": "d:/docker/share/Compiler/src",
+      "program": "d:/docker/share/Compiler/src/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
