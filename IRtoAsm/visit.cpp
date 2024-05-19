@@ -81,7 +81,7 @@ void Visit(const koopa_raw_value_t &value)
         break;
     default:
         // 其他类型暂时遇不到
-        std::cerr <<
+        std::cerr << kind.tag << std::endl;
         assert(false);
     }
 }
