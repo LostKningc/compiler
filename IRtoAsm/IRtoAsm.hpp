@@ -1,5 +1,5 @@
 #pragma once
-#include "koopa.h"
+#include "../include/koopa.h"
 #include <string>
 #include <iostream>
 #include <cassert>

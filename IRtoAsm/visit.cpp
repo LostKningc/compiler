@@ -1,4 +1,4 @@
-#include "IRtoAsm.hpp"
+#include "../include/IRtoAsm.hpp"
 
 // 访问 raw program
 void Visit(const koopa_raw_program_t &program)
@@ -81,6 +81,7 @@ void Visit(const koopa_raw_value_t &value)
         break;
     default:
         // 其他类型暂时遇不到
+        std::cerr <<
         assert(false);
     }
 }

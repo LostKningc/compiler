@@ -1,0 +1,3 @@
+.text
+.globl main
+main:
