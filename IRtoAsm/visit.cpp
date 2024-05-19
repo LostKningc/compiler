@@ -79,6 +79,10 @@ void Visit(const koopa_raw_value_t &value)
         // 访问 integer 指令
         Visit(kind.data.integer);
         break;
+    case KOOPA_RVT_BINARY:
+        // 访问 binary 指令
+        Visit(kind.data.binary);
+        break;
     default:
         // 其他类型暂时遇不到
         std::cerr << kind.tag << std::endl;
@@ -97,6 +101,11 @@ void Visit(const koopa_raw_return_t &ret)
 void Visit(const koopa_raw_integer_t &integer)
 {
     std::cout << "li a0, " << integer.value << std::endl;
+}
+
+void Visit(const koopa_raw_binary_t &binary)
+{
+    
 }
 
 // 访问对应类型指令的函数定义略
