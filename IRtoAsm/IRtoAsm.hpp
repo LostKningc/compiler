@@ -3,7 +3,7 @@
 #include <string>
 #include <iostream>
 #include <cassert>
-
+#include <map>
 void Visit(const koopa_raw_program_t &program);
 void Visit(const koopa_raw_slice_t &slice);
 void Visit(const koopa_raw_function_t &func);
