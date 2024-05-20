@@ -4,6 +4,8 @@
 
 #include <memory>
 #include <string>
+
+enum op{ADD,SUB,MUL,DIV,MOD,GT,LT,LE,GE,EQ,NE,AND,OR,NOT,NONE};
 // 所有 AST 的基类
 class BaseAST {
  public:
@@ -117,8 +119,36 @@ class DeclarationAST : public BaseAST {
 
 class ReturnAST: public BaseAST {
  public:
-  int retNum;
+  std::unique_ptr<BaseAST> retNum;
   void dump();
 };
 
+//TODO:解决了么？
+//二元操作的AST
+class BinaryExpAST: public BaseAST {
+ public:
+  //第一个操作数
+  std::unique_ptr<BaseAST> exp1;
+  //操作符
+  op op2;
+  //第二个操作数
+  std::unique_ptr<BaseAST> exp2;
+  void dump();
+};
+
+
+class UnaryExpAST: public BaseAST {
+ public:
+  op op1;
+  std::unique_ptr<BaseAST> exp1;
+  void dump();
+};
+
+
+//TODO:需要实现
+class NumberAST: public BaseAST {
+ public:
+  int value;
+  void dump();
+};
 #endif  // AST_HPP
