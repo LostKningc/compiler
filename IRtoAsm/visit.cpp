@@ -1,6 +1,27 @@
 #include "../include/IRtoAsm.hpp"
 std::map<koopa_raw_binary_t *, std::string> reg_map;
 std::stack<std::string> reg_stack;
+
+/////////////////////////
+const char *ir_asm_binaryop[] = {
+    [KOOPA_RBO_NOT_EQ] = "snez",
+    [KOOPA_RBO_EQ] = "seqz",
+    [KOOPA_RBO_GT] = "sgt",
+    [KOOPA_RBO_LT] = "slt",
+    [KOOPA_RBO_GE] = "slt",
+    [KOOPA_RBO_LE] = "sgt",
+    [KOOPA_RBO_ADD] = "add",
+    [KOOPA_RBO_SUB] = "sub",
+    [KOOPA_RBO_MUL] = "mul",
+    [KOOPA_RBO_DIV] = "div",
+    [KOOPA_RBO_MOD] = "rem",
+    [KOOPA_RBO_AND] = "and",
+    [KOOPA_RBO_OR] = "or",
+    [KOOPA_RBO_XOR] = "xor",
+    [KOOPA_RBO_SHL] = "sll",
+    [KOOPA_RBO_SHR] = "srl",
+    [KOOPA_RBO_SAR] = "sra"};
+
 // 访问 raw program
 void Visit(const koopa_raw_program_t &program)
 {
@@ -162,6 +183,7 @@ void Visit(const koopa_raw_binary_t &binary)
     switch (binary.op)
     {
     case KOOPA_RBO_EQ:
+    case KOOPA_RBO_NOT_EQ:
         if (lhs_is_binary)
         {
             if (rhs_is_binary)
@@ -174,15 +196,55 @@ void Visit(const koopa_raw_binary_t &binary)
             if (rhs_is_binary)
                 std::cout << std::setw(6) << "xori" << reg << ", " << rhs << ", " << lhs << std::endl;
             else
-                std::cout << std::setw(6) << "li" << reg << ", " << (binary.lhs->kind.data.integer.value == binary.rhs->kind.data.integer.value) << std::endl;
+            {
+                int32_t result;
+                if(binary.op == KOOPA_RBO_EQ)result = binary.lhs->kind.data.integer.value == binary.rhs->kind.data.integer.value;
+                if(binary.op == KOOPA_RBO_NOT_EQ)result = binary.lhs->kind.data.integer.value != binary.rhs->kind.data.integer.value;
+                std::cout << std::setw(6) << "li" << reg << ", " << result << std::endl;
+            }
         }
         if (lhs_is_binary || rhs_is_binary)
-            std::cout << std::setw(6) << "seqz" << reg << ", " << reg << std::endl;
+            std::cout << std::setw(6) << ir_asm_binaryop[binary.op] << reg << ", " << reg << std::endl;
         break;
+    case KOOPA_RBO_MUL:
+    case KOOPA_RBO_DIV:
+    case KOOPA_RBO_MOD:
+    case KOOPA_RBO_GT:
+    case KOOPA_RBO_LT:
+    case KOOPA_RBO_LE:
+    case KOOPA_RBO_GE:
     case KOOPA_RBO_SUB:
-        if(!lhs_is_binary && !rhs_is_binary)
+    case KOOPA_RBO_SHL:
+    case KOOPA_RBO_SHR:
+    case KOOPA_RBO_SAR:
+        if (binary.op == KOOPA_RBO_DIV && rhs_is_zero)
+            assert(false);
+        if (!lhs_is_binary && !rhs_is_binary)
         {
-            std::cout << std::setw(6) << "li" << reg << ", " << binary.lhs->kind.data.integer.value - binary.rhs->kind.data.integer.value << std::endl;
+            int32_t result;
+            if (binary.op == KOOPA_RBO_MUL)
+                result = binary.lhs->kind.data.integer.value * binary.rhs->kind.data.integer.value;
+            if (binary.op == KOOPA_RBO_SUB)
+                result = binary.lhs->kind.data.integer.value - binary.rhs->kind.data.integer.value;
+            if (binary.op == KOOPA_RBO_DIV)
+                result = binary.lhs->kind.data.integer.value / binary.rhs->kind.data.integer.value;
+            if (binary.op == KOOPA_RBO_MOD)
+                result = binary.lhs->kind.data.integer.value % binary.rhs->kind.data.integer.value;
+            if (binary.op == KOOPA_RBO_GT)
+                result = binary.lhs->kind.data.integer.value > binary.rhs->kind.data.integer.value;
+            if (binary.op == KOOPA_RBO_LT)
+                result = binary.lhs->kind.data.integer.value < binary.rhs->kind.data.integer.value;
+            if (binary.op == KOOPA_RBO_GE)
+                result = binary.lhs->kind.data.integer.value >= binary.rhs->kind.data.integer.value;
+            if (binary.op == KOOPA_RBO_LE)
+                result = binary.lhs->kind.data.integer.value <= binary.rhs->kind.data.integer.value;
+            if (binary.op == KOOPA_RBO_SHL)
+                result = binary.lhs->kind.data.integer.value << binary.rhs->kind.data.integer.value;
+            if (binary.op == KOOPA_RBO_SHR)
+                result = (u_int32_t)binary.lhs->kind.data.integer.value >> binary.rhs->kind.data.integer.value;
+            if (binary.op == KOOPA_RBO_SAR)
+                result = binary.lhs->kind.data.integer.value >> binary.rhs->kind.data.integer.value;
+            std::cout << std::setw(6) << "li" << reg << ", " << result << std::endl;
             break;
         }
         if (!lhs_is_zero && !lhs_is_binary)
@@ -194,23 +256,39 @@ void Visit(const koopa_raw_binary_t &binary)
             rhs = Visit(binary.rhs->kind.data.integer);
             reg_stack.push(rhs);
         }
-        std::cout << std::setw(6) << "sub" << reg << ", " << lhs << ", " << rhs << std::endl;
+        if (lhs_is_zero)
+            lhs = "x0";
+        if (rhs_is_zero)
+            rhs = "x0";
+        std::cout << std::setw(6) << ir_asm_binaryop[binary.op] << reg << ", " << lhs << ", " << rhs << std::endl;
+        if (binary.op == KOOPA_RBO_LE || binary.op == KOOPA_RBO_GE)
+            std::cout << std::setw(6) << "seqz" << reg << ", " << reg << std::endl;
         if (!lhs_is_zero && !lhs_is_binary)
             reg_stack.push(lhs);
         break;
-    case KOOPA_RBO_ADD:
-        // if (!lhs_is_binary)
-        // {
-        //     if ()
-        // }
-        break;
-    case KOOPA_RBO_MUL:
-        break;
-    case KOOPA_RBO_DIV:
-        break;
-    case KOOPA_RBO_MOD:
-        break;
+    case KOOPA_RBO_AND:
+    case KOOPA_RBO_OR:
     case KOOPA_RBO_XOR:
+    case KOOPA_RBO_ADD:
+        int32_t result;
+        if (binary.op == KOOPA_RBO_ADD)
+            result = binary.lhs->kind.data.integer.value + binary.rhs->kind.data.integer.value;
+        if (binary.op == KOOPA_RBO_XOR)
+            result = binary.lhs->kind.data.integer.value ^ binary.rhs->kind.data.integer.value;
+        if (lhs_is_binary)
+        {
+            if (rhs_is_binary)
+                std::cout << std::setw(6) << ir_asm_binaryop[binary.op] << reg << ", " << lhs << ", " << rhs << std::endl;
+            else
+                std::cout << std::setw(6) << std::string(ir_asm_binaryop[binary.op]) + 'i' << reg << ", " << lhs << ", " << rhs << std::endl;
+        }
+        else
+        {
+            if (rhs_is_binary)
+                std::cout << std::setw(6) << std::string(ir_asm_binaryop[binary.op]) + 'i' << reg << ", " << rhs << ", " << lhs << std::endl;
+            else
+                std::cout << std::setw(6) << "li" << reg << ", " << result << std::endl;
+        }
         break;
     };
 }
