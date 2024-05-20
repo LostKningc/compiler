@@ -33,6 +33,7 @@ extern sym_node *sym_head, *sym_tail, *sym_cur;
 %union {
   std::string *str_val;
   int int_val;
+  op op_val;
   BaseAST *ast_val;
 }
 
@@ -45,7 +46,10 @@ extern sym_node *sym_head, *sym_tail, *sym_cur;
 %type <ast_val> FuncDef Block Stmt Sents Sent
 %type <ast_val> Assignments Assignment
 %type <ast_val> Declaration Declarations Declarationlist DeclarationType
-%type <int_val> Expr CalExpr Expr_prio1 Expr_prio2 Number
+%type <ast_val> RelExp EqExp LAndExp LOrExp
+%type <ast_val> Exp AddExp MulExp PrimaryExp UnaryExp
+%type <op_val> UnaryOp
+%type <ast_val> Number
 %type <str_val> BasicType 
 
 %%
@@ -148,17 +152,17 @@ Sents
     }
   ;
 
-
+//TODO:重构ReturnAST
 Sent:
   Assignments ';' {
     auto ast =new SentAST();
     ast->content = unique_ptr<BaseAST>($1);
     $$=ast;
   }|
-  RETURN Expr ';' {
+  RETURN Exp ';' {
     auto ast = new SentAST();
     auto retAst=new ReturnAST();
-    retAst->retNum=$2; 
+    retAst->retNum=unique_ptr<BaseAST>($2);
     ast->content=unique_ptr<BaseAST>(retAst);
     $$=ast;
   }
@@ -169,67 +173,180 @@ Sent:
   }
   ;
 
-Expr
-  : CalExpr {
+//表达式的部分
+//构造Exp树
+Exp
+  : LOrExp {
     $$ = $1;
-  }|
-  Expr '>' CalExpr{
-    $$=($1>$3);
-  }
-  |Expr '<' CalExpr{
-    $$=($1<$3);
-  }
-  |Expr '>''=' CalExpr{
-    $$=($1>=$4);
-  }
-  |Expr '<''=' CalExpr{
-    $$=($1<=$4);
-  }
-  |Expr '=''=' CalExpr{
-    $$=($1==$4);
-  }
-  |Expr '!''=' CalExpr{
-    $$=($1!=$4);
   }
   ;
 
-CalExpr:
-  CalExpr '+' Expr_prio1 {
-    $$=$1+$3;
+//构造LOrExp树
+LOrExp:
+  LOrExp '|''|' LAndExp {
+    auto lorexp = new BinaryExpAST();
+    lorexp->exp1 = unique_ptr<BaseAST>($1);
+    lorexp->exp2 = unique_ptr<BaseAST>($4);
+    lorexp->op2=op::OR;
+    $$ = lorexp;
   }
-  | CalExpr '-' Expr_prio1 {
-    $$=$1-$3;
-  }
-  | Expr_prio1 {
-    $$=$1;
-  }
-  ;
-
-Expr_prio1:
-  Expr_prio1 '*' Expr_prio2 {
-    $$=$1*$3;
-  }
-  | Expr_prio1 '/' Expr_prio2 {
-    $$=$1/$3;
-  }
-  | Expr_prio1 '%' Expr_prio2 {
-    $$=$1%$3;
-  }
-  |Expr_prio2 {
+  | LAndExp {
     $$=$1;
   }
   ; 
 
-Expr_prio2:
-  '(' Expr ')' {
-    $$=$2;
+//构造LAndExp树
+LAndExp:
+  LAndExp '&''&' EqExp {
+    auto landexp = new BinaryExpAST();
+    landexp->exp1 = unique_ptr<BaseAST>($1);
+    landexp->exp2 = unique_ptr<BaseAST>($4);
+    landexp->op2 = op::AND;
+    $$ = landexp;
+  }
+  | EqExp {
+    $$=$1;
+  }
+  ;
+
+//构造EqExp树
+EqExp:
+  EqExp '=''=' RelExp {
+    auto eqexp = new BinaryExpAST();
+    eqexp->exp1 = unique_ptr<BaseAST>($1);
+    eqexp->exp2 = unique_ptr<BaseAST>($4);
+    eqexp->op2 = op::EQ;
+    $$ = eqexp;
+  }
+  | EqExp '!' '=' RelExp {
+    auto eqexp = new BinaryExpAST();
+    eqexp->exp1 = unique_ptr<BaseAST>($1);
+    eqexp->exp2 = unique_ptr<BaseAST>($4);
+    eqexp->op2 = op::NE;
+    $$ = eqexp;
+  }
+  | RelExp {
+    $$=$1;
+  }
+  ;
+
+
+//构造RelExp树
+RelExp:
+  AddExp '>' AddExp {
+    auto relexp = new BinaryExpAST();
+    relexp->exp1 = unique_ptr<BaseAST>($1);
+    relexp->exp2 = unique_ptr<BaseAST>($3);
+    relexp->op2 = op::GT;
+    $$ = relexp;
+  }
+  | AddExp '<' AddExp {
+    auto relexp = new BinaryExpAST();
+    relexp->exp1 = unique_ptr<BaseAST>($1);
+    relexp->exp2 = unique_ptr<BaseAST>($3);
+    relexp->op2 = op::LT;
+    $$ = relexp;
+  }
+  | AddExp '>''=' AddExp {
+    auto relexp = new BinaryExpAST();
+    relexp->exp1 = unique_ptr<BaseAST>($1);
+    relexp->exp2 = unique_ptr<BaseAST>($4);
+    relexp->op2 = op::GE;
+    $$ = relexp;
+  }
+  | AddExp '<''=' AddExp {
+    auto relexp = new BinaryExpAST();
+    relexp->exp1 = unique_ptr<BaseAST>($1);
+    relexp->exp2 = unique_ptr<BaseAST>($4);
+    relexp->op2 = op::LE;
+    $$ = relexp;
+  }
+  | AddExp {
+    $$=$1;
+  }
+  ;
+
+//构造AddExp树
+AddExp:
+  AddExp '+' MulExp {
+    auto addexp = new BinaryExpAST();
+    addexp->exp1 = unique_ptr<BaseAST>($1);
+    addexp->exp2 = unique_ptr<BaseAST>($3);
+    addexp->op2 = op::ADD;
+    $$ = addexp;
+  }
+  | AddExp '-' MulExp {
+    auto addexp = new BinaryExpAST();
+    addexp->exp1 = unique_ptr<BaseAST>($1);
+    addexp->exp2 = unique_ptr<BaseAST>($3);
+    addexp->op2 = op::SUB;
+    $$ = addexp;
+  }
+  | MulExp {
+    $$=$1;
+  }
+  ;
+
+//构造MulExp树
+MulExp:
+  MulExp '*' UnaryExp {
+    auto mulexp = new BinaryExpAST();
+    mulexp->exp1 = unique_ptr<BaseAST>($1);
+    mulexp->op2 = op::MUL;
+    mulexp->exp2 = unique_ptr<BaseAST>($3);
+    $$ = mulexp;
+  }
+  | MulExp '/' UnaryExp {
+    auto mulexp = new BinaryExpAST();
+    mulexp->exp1 = unique_ptr<BaseAST>($1);
+    mulexp->op2 = op::DIV;
+    mulexp->exp2 = unique_ptr<BaseAST>($3);
+    $$ = mulexp;
+  }
+  | MulExp '%' UnaryExp {
+    auto mulexp = new BinaryExpAST();
+    mulexp->exp1 = unique_ptr<BaseAST>($1);
+    mulexp->op2 = op::MOD;
+    mulexp->exp2 = unique_ptr<BaseAST>($3);
+    $$ = mulexp;
+  }
+  |UnaryExp {
+    $$ = $1;
+  }
+  ; 
+
+
+//TODO:构建UnaryExp树
+UnaryExp:
+  PrimaryExp {
+    $$ = $1;
+  }
+  |UnaryOp UnaryExp {
+    auto ast = new UnaryExpAST();
+    ast->op1 = $1;
+    ast->exp1 = unique_ptr<BaseAST>($2);
+    $$ = ast;
+  }
+  ;
+
+UnaryOp: 
+  '-' {
+    $$ = op::SUB;
+  }|
+  '+' {
+    $$ = op::ADD;
+  }
+  |'!' {
+    $$ = op::NOT;
+  }
+  ;
+//TODO:构建PrimaryExp树
+PrimaryExp:
+  '(' Exp ')' {
+    $$ = $2;
   }
   |Number {
-    $$=$1;
-  }|IDENT{
-    int num=0;
-    get_sym_val(sym_head,*($1),&num);
-    $$=num;
+    $$ = $1;
   }
   ;
 
@@ -264,12 +381,14 @@ Declaration:
     ast->value = 0;
     $$ = ast;
   }|
-  IDENT '=' Expr {
+  IDENT '=' Exp {
     auto ast = new DeclarationAST();
     ast->ident = *($1);
-    set_sym_val(sym_head,sym_tail,*($1),$3);
-    ast->value = $3;
-    $$ = ast;
+    //set_sym_val(sym_head,sym_tail,*($1),$3);
+    //ast->value = $3;
+    ast->value = 0;
+    //$$ = ast;
+    $$=0;
   }
   ;
 
@@ -293,18 +412,21 @@ Assignments:
   ;
 
 Assignment:
-  IDENT '=' Expr {
+  IDENT '=' Exp {
     auto ast=new AssignAST();
     ast->ident=*($1);
-    ast->value=$3;
-    set_sym_val(sym_head,sym_tail,*($1),$3);
+    //ast->value=$3;
+    //set_sym_val(sym_head,sym_tail,*($1),$3);
     $$=ast;
   }
   ;
 
+//TODO:构建Number树
 Number
   : INT_CONST {
-    $$ = $1;
+    auto ast = new NumberAST();
+    ast->value = $1;
+    $$ = ast;
   }
   ;
 %%

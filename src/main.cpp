@@ -21,7 +21,7 @@ sym_node *sym_head=nullptr, *sym_tail=nullptr, *sym_cur=nullptr;
 extern FILE *yyin;
 extern int yyparse(std::unique_ptr<BaseAST> &ast);
 
-
+int now=0;
 void parseGrammar(string fname);
 
 
