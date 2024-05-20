@@ -47,7 +47,7 @@ void Visit(const koopa_raw_slice_t &slice)
 void Visit(const koopa_raw_function_t &func)
 {
 
-    std::cout << func->name+1 << ":" << std::endl;
+    std::cout << func->name + 1 << ":" << std::endl;
 
     // 执行一些其他的必要操作
     // ...
@@ -73,14 +73,17 @@ void Visit(const koopa_raw_value_t &value)
     {
     case KOOPA_RVT_RETURN:
         // 访问 return 指令
+        std::cerr << "return" << std::endl;
         Visit(kind.data.ret);
         break;
     case KOOPA_RVT_INTEGER:
         // 访问 integer 指令
+        std::cerr << "integer" << std::endl;
         Visit(kind.data.integer);
         break;
     case KOOPA_RVT_BINARY:
         // 访问 binary 指令
+        std::cerr << "binary" << std::endl;
         Visit(kind.data.binary);
         break;
     default:
@@ -105,8 +108,10 @@ void Visit(const koopa_raw_integer_t &integer)
 
 void Visit(const koopa_raw_binary_t &binary)
 {
-    
+    std::cerr << &binary << std::endl;
+    std::cerr << &(binary.rhs->kind.data.binary) << std::endl;
 }
+
 
 // 访问对应类型指令的函数定义略
 // 视需求自行实现
