@@ -13,6 +13,6 @@ void Visit(const koopa_raw_basic_block_t &bb);
 void Visit(const koopa_raw_value_t &value);
 void Visit(const koopa_raw_return_t &ret);
 std::string Visit(const koopa_raw_integer_t &integer); //from void to string
-void Visit(const koopa_raw_binary_t &binary);
+void Visit(const koopa_raw_binary_t &binary,uint32_t use_count);
 
 int IRanalysis(std::string inputfile, std::string outputfile);

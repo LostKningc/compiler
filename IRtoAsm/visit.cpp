@@ -1,5 +1,6 @@
 #include "../include/IRtoAsm.hpp"
 std::map<koopa_raw_binary_t *, std::string> reg_map;
+std::map<std::string, int> reg_count;
 std::stack<std::string> reg_stack;
 
 /////////////////////////
@@ -28,6 +29,11 @@ void Visit(const koopa_raw_program_t &program)
     // 执行一些其他的必要操作
     // ...
     // 初始化寄存器栈
+    for (int i = 7; i >= 0; --i)
+    {
+        std::string str = "a" + std::to_string(i);
+        reg_stack.push(str);
+    }
     for (int i = 6; i >= 0; --i)
     {
         std::string str = "t" + std::to_string(i);
@@ -103,7 +109,7 @@ void Visit(const koopa_raw_value_t &value)
     {
     case KOOPA_RVT_RETURN:
         // 访问 return 指令
-        std::cerr << "return" << std::endl;
+        //std::cerr << "return" << std::endl;
         Visit(kind.data.ret);
         break;
     case KOOPA_RVT_INTEGER:
@@ -113,12 +119,12 @@ void Visit(const koopa_raw_value_t &value)
         break;
     case KOOPA_RVT_BINARY:
         // 访问 binary 指令
-        std::cerr << "binary" << std::endl;
-        Visit(kind.data.binary);
+        //std::cerr << "binary" << std::endl;
+        Visit(kind.data.binary, value->used_by.len);
         break;
     default:
         // 其他类型暂时遇不到
-        std::cerr << kind.tag << std::endl;
+        //std::cerr << kind.tag << std::endl;
         assert(false);
     }
 }
@@ -152,7 +158,7 @@ std::string Visit(const koopa_raw_integer_t &integer)
     return reg;
 }
 
-void Visit(const koopa_raw_binary_t &binary)
+void Visit(const koopa_raw_binary_t &binary,uint32_t use_count=0)
 {
     std::string reg;
     if (reg_stack.empty())
@@ -160,6 +166,8 @@ void Visit(const koopa_raw_binary_t &binary)
     reg = reg_stack.top();
     reg_stack.pop();
     reg_map.insert({(koopa_raw_binary_t *)&binary, reg});
+    if(reg_count.find(reg)==reg_count.end() && use_count)reg_count.insert({reg, use_count});
+    else if(use_count)reg_count[reg] = use_count;
 
     // 现在只考虑二元运算的左右值是BINARY还是INTEGER, 在这儿得到左右值在转换为asm形式时对应的字符串
     bool lhs_is_binary = binary.lhs->kind.tag == KOOPA_RVT_BINARY;
@@ -278,6 +286,10 @@ void Visit(const koopa_raw_binary_t &binary)
             result = binary.lhs->kind.data.integer.value + binary.rhs->kind.data.integer.value;
         if (binary.op == KOOPA_RBO_XOR)
             result = binary.lhs->kind.data.integer.value ^ binary.rhs->kind.data.integer.value;
+        if (binary.op == KOOPA_RBO_AND)
+            result = binary.lhs->kind.data.integer.value & binary.rhs->kind.data.integer.value;
+        if (binary.op == KOOPA_RBO_OR)
+            result = binary.lhs->kind.data.integer.value | binary.rhs->kind.data.integer.value;
         if (lhs_is_binary)
         {
             if (rhs_is_binary)
@@ -294,6 +306,19 @@ void Visit(const koopa_raw_binary_t &binary)
         }
         break;
     };
+    if(lhs_is_binary) {
+        reg_count[lhs]--;
+        if(reg_count[lhs] == 0) {
+            reg_stack.push(lhs);
+        }
+    }
+    if (rhs_is_binary) {
+        reg_count[rhs]--;
+        if(reg_count[rhs] == 0) {
+            reg_stack.push(rhs);
+        }
+    }
+    
 }
 
 
