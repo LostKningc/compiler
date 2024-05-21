@@ -1,16 +1,25 @@
-// 正确的
 fun @main(): i32 {
 %entry:
-  // int x = 10;
-  @x = alloc i32
-  store 10, @x
+  @a = alloc i32
+  store 2, @a
+  // if 的条件判断部分
+  %0 = load @a
+  br %0, %then, %else
 
-  // x = x + 1;
-  %0 = load @x
-  %1 = eq %0, 1
-  store %1, @x
+// if 语句的 if 分支
+%then:
+  %1 = load @a
+  %2 = add %1, 1
+  store %2, @a
+  jump %end
 
-  // return x;
-  %2 = load @x
-  ret %2
+// if 语句的 else 分支
+%else:
+  store 0, @a
+  jump %end
+
+// if 语句之后的内容, if/else 分支的交汇处
+%end:
+  %3 = load @a
+  ret %3
 }

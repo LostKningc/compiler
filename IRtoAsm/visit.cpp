@@ -98,8 +98,8 @@ void Visit(const koopa_raw_function_t &func)
                 size_of_stack_frame += 4;
             }
         }
-        size_of_stack_frame = -((size_of_stack_frame + 15) / 16) * 16;
     }
+    size_of_stack_frame = -((size_of_stack_frame + 15) / 16) * 16;
     if (size_of_stack_frame < -2048)
     {
         std::cout << std::setw(6) << "li t1, " << size_of_stack_frame << std::endl;
@@ -122,7 +122,7 @@ void Visit(const koopa_raw_basic_block_t &bb)
     // 执行一些其他的必要操作
     // ...
     // 访问所有指令
-
+    std::cout << bb->name + 1 << ":" << std::endl;
     Visit(bb->insts);
 }
 
@@ -147,7 +147,7 @@ void Visit(const koopa_raw_value_t &value)
     case KOOPA_RVT_BINARY:
         // 访问 binary 指令
         // std::cerr << "binary" << std::endl;
-        Visit(kind.data.binary, value,value->used_by.len);
+        Visit(kind.data.binary, value, value->used_by.len);
         break;
     case KOOPA_RVT_ALLOC:
         // 访问 alloc 指令
@@ -160,13 +160,21 @@ void Visit(const koopa_raw_value_t &value)
         // 访问 store 指令
         Visit(kind.data.store);
         break;
+    case KOOPA_RVT_BRANCH:
+        // 访问 branch 指令
+        Visit(kind.data.branch);
+        break;
+    case KOOPA_RVT_JUMP:
+        // 访问 jump 指令
+        Visit(kind.data.jump);
+        break;
     default:
         // 其他类型暂时遇不到
         std::cerr << kind.tag << std::endl;
-        // assert(false);
+        assert(false);
     }
-    
-    std::cout<<std::endl;
+
+    std::cout << std::endl;
 }
 
 // 访问返回指令
@@ -186,7 +194,6 @@ void Visit(const koopa_raw_return_t &ret)
         std::cout << std::setw(6) << "lw" << "a0, " << stack_map[ret.value] << "(sp)" << std::endl;
         break;
     };
-    
 
     if (size_of_stack_frame < -2047)
     {
@@ -379,14 +386,13 @@ void Visit(const koopa_raw_binary_t &binary, const koopa_raw_value_t &value, con
     };
 
     std::cout << std::setw(6) << "sw" << reg << ", " << stack_map[value] << "(sp)" << std::endl;
-    
+
     if (!lhs_is_integer)
         reg_stack.push(lhs);
     if (!rhs_is_integer)
         reg_stack.push(rhs);
 
     reg_stack.push(reg);
-
 }
 
 //
@@ -401,7 +407,7 @@ void Visit(const koopa_raw_store_t &store)
         std::cout << std::setw(6) << "li" << reg << ", " << store.value->kind.data.integer.value << std::endl;
     else
         std::cout << std::setw(6) << "lw" << reg << ", " << stack_map[(koopa_raw_value_t)(store.value)] << "(sp)" << std::endl;
-    
+
     std::cout << std::setw(6) << "sw" << reg << ", " << stack_map[(koopa_raw_value_t)(store.dest)] << "(sp)" << std::endl;
 }
 
@@ -416,6 +422,27 @@ void Visit(const koopa_raw_load_t &load, const koopa_raw_value_t &value)
     std::cout << std::setw(6) << "sw" << reg << ", " << stack_map[value] << "(sp)" << std::endl;
     reg_stack.push(reg);
 }
-// 访问对应类型指令的函数定义略
-// 视需求自行实现
-// ...
+
+void Visit(const koopa_raw_branch_t &branch)
+{
+    if (reg_stack.empty())
+    {
+        assert(false);
+    }
+    std::string reg = reg_stack.top();
+    if (branch.cond->kind.tag == KOOPA_RVT_INTEGER)
+    {
+        std::cout << std::setw(6) << "li" << reg <<", " << branch.cond->kind.data.integer.value << std::endl;
+    }else{
+        std::cout << std::setw(6) << "lw" << reg << ", " << stack_map[branch.cond] << "(sp)" << std::endl;
+    }
+
+    std::cout << std::setw(6) << "beqz" << reg << ", " << branch.false_bb->name+1 << std::endl;
+    std::cout << std::setw(6) << "j" << branch.true_bb->name+1 << std::endl;
+    
+}
+
+void Visit(const koopa_raw_jump_t &jump)
+{
+    std::cout << std::setw(6) << "j" << jump.target->name + 1 << std::endl;
+}
