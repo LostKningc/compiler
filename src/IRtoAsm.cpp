@@ -1,7 +1,8 @@
-#include "IRtoAsm.hpp"
+#include "../include/IRtoAsm.hpp"
 #include <fstream>
 
 int IRanalysis(std::string inputfile, std::string outputfile)
+
 {
     std::ifstream in(inputfile);
     std::string str = "";
@@ -31,7 +32,6 @@ int IRanalysis(std::string inputfile, std::string outputfile)
     Visit(raw);
     
     std::cout.rdbuf(coutbuf);
-    out.close();
     
     koopa_delete_raw_program_builder(builder);
 
