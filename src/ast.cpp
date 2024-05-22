@@ -1,7 +1,9 @@
 #include "ast.hpp"
+#include"variable.hpp"
 #include <iostream>
-
+using namespace std;
 extern int now;
+extern std::unordered_map<std::string,std::pair<int,bool>> val_table;
 void CompUnitAST::dump() {
     //std::cout<<"Compunit { \n";
     start->dump();
@@ -35,9 +37,19 @@ void FuncDefAST::dump() {
 }
 
 void DeclarationTypeAST::dump() {
-    //std::cout<<"DeclarationType { ";
-    std::cout<<*type<<" ";
-    //std::cout<<"}";
+    switch(type){
+        case Btype::BINT:
+            std::cout<<"i32 ";
+            break;
+        case Btype::BVOID:
+            std::cout<<"void ";
+            break;
+        case Btype::BFLOAT:
+            std::cout<<"float ";
+            break;
+        default:
+            break;
+    }
 }
 
 void BlockAST::dump() {
@@ -48,18 +60,15 @@ void BlockAST::dump() {
 
 void StmtAST::dump() {
     std::cout<<"\%entry:";
-
+    std::cout<<std::endl;
     sents->dump();
 }
 
 void SentsAST::dump() {
-    if(sents!=nullptr)
+    for(auto &sent:sents)
     {
-        sents->dump();
-        // std::cout<<"\n";
-        std::cout<<" ";
+        sent->dump();
     }
-    sent->dump();
 }
 
 void SentAST::dump() {
@@ -68,28 +77,62 @@ void SentAST::dump() {
     //std::cout<<" }";
 }
 
-void DeclarationlistAST::dump() {
-    // std::cout<<"Declarationlist { ";
-    // type->dump();
-    // std::cout<<", Declarations { ";
-    // decls->dump();
-    // std::cout<<" }";
-    // std::cout<<" }";
+//TODO:完成符号表后
+void ConstDeclListAST::dump(){
+    ConstDefsAST* defs=dynamic_cast<ConstDefsAST*>(constdefs.get());
+    if(defs==nullptr){
+        std::cerr << "Exception: " << "dynamic_cast failed"<< std::endl;
+    }
+    defs->type=this->type;
+    constdefs->dump();
 }
 
-void DeclarationsAST::dump() {
-    // if(decls!=nullptr)
-    //     std::cout<<",";
-    // decl->dump();
+void VarDeclListAST::dump(){
+    vardefs->dump();
+}
+//TODO:完成符号表后
+void ConstDefsAST::dump(){
+    for(auto &constdef:constdefs)
+    {
+        ConstDefAST* def=dynamic_cast<ConstDefAST*>(constdef.get());
+        if(def==nullptr){
+            std::cerr << "Exception: " << "dynamic_cast failed"<< std::endl;
+        }
+        def->type=this->type;
+        constdef->dump();
+    }
 }
 
-void DeclarationAST::dump() {
-    // std::cout<<"Declaration { ";
-    // std::cout<<ident<<"("<<value<<")";
-    // std::cout<<" }";
+void VarDefsAST::dump(){
+    for(auto &vardef:vardefs){
+        vardef->dump();
+    }
+}
+//TODO:完成符号表后
+void ConstDefAST::dump(){
+    initval->up_calc();
+    calc();
 }
 
-
+void VarDefAST::dump(){
+    //std::cout<<"VarDef { ";
+    std::cout<<"@"<<ident<<" = "<<"alloc ";
+    if(type==Btype::BINT) cout<<"i32"<<std::endl;
+    //std::cout<<","<<ident<<",";
+    if(initval!=nullptr)
+    {
+        initval->up_calc();
+        if(initval->calc_f){
+            std::cout<<"store "<<initval->calc()<<", "<<"@"<<ident<<std::endl;
+        }
+        else{
+            initval->dump();
+            std::cout<<"store "<<"%"<<now-1<<", "<<"@"<<ident<<std::endl;
+        }
+    }
+    std::cout<<std::endl;
+    //std::cout<<" }";
+}
 void AssignsAST::dump() {
     // if(assigns!=nullptr)
     // {
@@ -100,73 +143,204 @@ void AssignsAST::dump() {
 }
 
 void AssignAST::dump() {
-    // std::cout<<"Assign { ";
-    // std::cout<<ident<<"("<<value<<")";
-    // std::cout<<" }";
+    if(val_table[ident].second){
+        cerr<<"this is a const,can't be assigned"<<std::endl;
+    }else{
+        exp->up_calc();
+        if(exp->calc_f){
+            std::cout<<"store "<<exp->calc()<<", "<<"@"<<ident<<std::endl;
+        }
+        else{
+            exp->dump();
+            std::cout<<"store "<<"%"<<now-1<<", "<<"@"<<ident<<std::endl;
+        }
+    }
 }
 
 void ReturnAST::dump() {
-    retNum->dump();
-    std::cout<<"ret "<<"%"<<now-1<<std::endl;
+    //此处需要更新
+    retNum->up_calc();
+    if(retNum->calc_f)
+        std::cout<<"ret "<<retNum->calc()<<std::endl;
+    else{
+        retNum->dump();
+        std::cout<<"ret "<<"%"<<now-1<<std::endl;
+    }
+}
+
+void ConstExpAST::dump() {
+    exp->dump();
 }
 
 //TODO:解决了么
 void BinaryExpAST::dump() {
-    exp1->dump();
-    int now1=now-1;
-    exp2->dump();
-    int now2=now-1;
+    int now1=0,now2=0;
+    if(!exp1->calc_f){
+        exp1->dump();
+        now1=now-1;
+    }
+
+    if(!exp2->calc_f){
+        exp2->dump();
+        now2=now-1;
+    }
     switch(op2){
         case op::ADD:
-            std::cout<<"%"<<now<<"= "<<"add "<<"%"<<now1<<",%"<<now2<<std::endl;
+            std::cout<<"%"<<now<<"= "<<"add ";
+            if(exp1->calc_f)
+                std::cout<<exp1->calc();
+            else
+                std::cout<<"%"<<now1;
+            std::cout<<", ";
+            if(exp2->calc_f)
+                std::cout<<exp2->calc();
+            else
+                std::cout<<"%"<<now2;
+            std::cout<<std::endl;
             ++now;
             break;
         case op::SUB:
-            std::cout<<"%"<<now<<"= "<<"sub "<<"%"<<now1<<",%"<<now2<<std::endl;
+            if(exp1->calc_f)
+                std::cout<<"%"<<now<<"= "<<"sub "<<exp1->calc();
+            else
+                std::cout<<"%"<<now<<"= "<<"sub "<<"%"<<now1;
+            cout << ", ";
+            if(exp2->calc_f)
+                std::cout<<exp2->calc();
+            else
+                std::cout<<"%"<<now2;
+            std::cout<<std::endl;
             ++now;
             break;
         case op::MUL:
-            std::cout<<"%"<<now<<"= "<<"mul "<<"%"<<now1<<",%"<<now2<<std::endl;
+            if(exp1->calc_f)
+                std::cout<<"%"<<now<<"= "<<"mul "<<exp1->calc();
+            else
+                std::cout<<"%"<<now<<"= "<<"mul "<<"%"<<now1;
+            cout << ", ";
+            if(exp2->calc_f)
+                std::cout<<exp2->calc();
+            else
+                std::cout<<"%"<<now2;
+            std::cout<<std::endl;
             ++now;
             break;
         case op::DIV:
-            std::cout<<"%"<<now<<"= "<<"div "<<"%"<<now1<<",%"<<now2<<std::endl;
+            if(exp1->calc_f)
+                std::cout<<"%"<<now<<"= "<<"div "<<exp1->calc();
+            else
+                std::cout<<"%"<<now<<"= "<<"div "<<"%"<<now1;
+            cout << ", ";
+            if(exp2->calc_f)
+                std::cout<<exp2->calc();
+            else
+                std::cout<<"%"<<now2;
+            std::cout<<std::endl;
             ++now;
             break;
         case op::MOD:
-            std::cout<<"%"<<now<<"= "<<"mod "<<"%"<<now1<<",%"<<now2<<std::endl;
+            if(exp1->calc_f)
+                std::cout<<"%"<<now<<"= "<<"mod "<<exp1->calc();
+            else
+                std::cout<<"%"<<now<<"= "<<"mod "<<"%"<<now1;
+            cout << ", ";
+            if(exp2->calc_f)
+                std::cout<<exp2->calc();
+            else
+                std::cout<<"%"<<now2;
+            std::cout<<std::endl;
             ++now;
             break;
         case op::GT:
-            std::cout<<"%"<<now<<"= "<<"gt "<<"%"<<now1<<",%"<<now2<<std::endl;
+            if(exp1->calc_f)
+                std::cout<<"%"<<now<<"= "<<"gt "<<exp1->calc();
+            else
+                std::cout<<"%"<<now<<"= "<<"gt "<<"%"<<now1;
+            cout << ", ";
+            if(exp2->calc_f)
+                std::cout<<exp2->calc();
+            else
+                std::cout<<"%"<<now2;
+            std::cout<<std::endl;
             ++now;
             break;
         case op::LT:
-            std::cout<<"%"<<now<<"= "<<"lt "<<"%"<<now1<<",%"<<now2<<std::endl;
+            if(exp1->calc_f)
+                std::cout<<"%"<<now<<"= "<<"lt "<<exp1->calc();
+            else
+                std::cout<<"%"<<now<<"= "<<"lt "<<"%"<<now1;
+            cout << ", ";
+            if(exp2->calc_f)
+                std::cout<<exp2->calc();
+            else
+                std::cout<<"%"<<now2;
+            std::cout<<std::endl;
             ++now;
             break;
         case op::GE:
-            std::cout<<"%"<<now<<"= "<<"ge "<<"%"<<now1<<",%"<<now2<<std::endl;
+            if(exp1->calc_f)
+                std::cout<<"%"<<now<<"= "<<"ge "<<exp1->calc();
+            else
+                std::cout<<"%"<<now<<"= "<<"ge "<<"%"<<now1;
+            cout << ", ";
+            if(exp2->calc_f)
+                std::cout<<exp2->calc();
+            else
+                std::cout<<"%"<<now2;
+            std::cout<<std::endl;
             ++now;
             break;
         case op::LE:
-            std::cout<<"%"<<now<<"= "<<"le "<<"%"<<now1<<",%"<<now2<<std::endl;
+            if(exp1->calc_f)
+                std::cout<<"%"<<now<<"= "<<"le "<<exp1->calc();
+            else
+                std::cout<<"%"<<now<<"= "<<"le "<<"%"<<now1;
+            cout << ", ";
+            if(exp2->calc_f)
+                std::cout<<exp2->calc();
+            else
+                std::cout<<"%"<<now2;
+            std::cout<<std::endl;
             ++now;
             break;
         case op::EQ:
-            std::cout<<"%"<<now<<"= "<<"eq "<<"%"<<now1<<",%"<<now2<<std::endl;
+            if(exp1->calc_f)
+                std::cout<<"%"<<now<<"= "<<"eq "<<exp1->calc();
+            else
+                std::cout<<"%"<<now<<"= "<<"eq "<<"%"<<now1;
+            cout << ", ";
+            if(exp2->calc_f)
+                std::cout<<exp2->calc();
+            else
+                std::cout<<"%"<<now2;
+            std::cout<<std::endl;
             ++now;
             break;
         case op::NE:
-            std::cout<<"%"<<now<<"= "<<"ne "<<"%"<<now1<<",%"<<now2<<std::endl;
+            if(exp1->calc_f)
+                std::cout<<"%"<<now<<"= "<<"ne "<<exp1->calc();
+            else
+                std::cout<<"%"<<now<<"= "<<"ne "<<"%"<<now1;
+            cout << ", ";
+            if(exp2->calc_f)
+                std::cout<<exp2->calc();
+            else
+                std::cout<<"%"<<now2;
+            std::cout<<std::endl;
             ++now;
             break;
         case op::AND:
-            std::cout<<"%"<<now<<"= "<<"eq "<<0<<",%"<<now2<<std::endl;
+            if(exp2->calc_f)
+                std::cout<<"%"<<now<<"= "<<"eq "<<0<<", "<<exp2->calc()<<std::endl;
+            else
+                std::cout<<"%"<<now<<"= "<<"eq "<<0<<", "<<"%"<<now2<<std::endl;
             now2=now++;
             std::cout<<"%"<<now<<"= "<<"eq "<<0<<",%"<<now2<<std::endl;
             now2=now++;
-            std::cout<<"%"<<now<<"= "<<"eq "<<0<<",%"<<now1<<std::endl;
+            if(exp1->calc_f)
+                std::cout<<"%"<<now<<"= "<<"eq "<<0<<", "<<exp1->calc()<<std::endl;
+            else
+                std::cout<<"%"<<now<<"= "<<"eq "<<0<<", "<<"%"<<now1<<std::endl;
             now1=now++;
             std::cout<<"%"<<now<<"= "<<"eq "<<0<<",%"<<now1<<std::endl;
             now1=now++;
@@ -174,11 +348,17 @@ void BinaryExpAST::dump() {
             ++now;
             break;
         case op::OR:
-            std::cout<<"%"<<now<<"= "<<"eq "<<0<<",%"<<now2<<std::endl;
+            if(exp2->calc_f)
+                std::cout<<"%"<<now<<"= "<<"eq "<<0<<", "<<exp2->calc()<<std::endl;
+            else
+                std::cout<<"%"<<now<<"= "<<"eq "<<0<<",%"<<now2<<std::endl;
             now2=now++;
             std::cout<<"%"<<now<<"= "<<"eq "<<0<<",%"<<now2<<std::endl;
             now2=now++;
-            std::cout<<"%"<<now<<"= "<<"eq "<<0<<",%"<<now1<<std::endl;
+            if(exp1->calc_f)
+                std::cout<<"%"<<now<<"= "<<"eq "<<0<<", "<<exp1->calc()<<std::endl;
+            else
+                std::cout<<"%"<<now<<"= "<<"eq "<<0<<",%"<<now1<<std::endl;
             now1=now++;
             std::cout<<"%"<<now<<"= "<<"eq "<<0<<",%"<<now1<<std::endl;
             now1=now++;
@@ -190,6 +370,8 @@ void BinaryExpAST::dump() {
             break;
     }
 }
+
+
 
 //TODO:解决了么？
 void UnaryExpAST::dump() {
@@ -204,6 +386,14 @@ void UnaryExpAST::dump() {
     }
 }
 
+void LValAST::dump() {
+
+    if(calc_f)
+        std::cout<<"%"<<now<<"= "<<"add 0, "<<val_table[ident].first<<std::endl;
+    else
+        std::cout<<"%"<<now<<"= "<<"load "<<"@"<<ident<<std::endl;
+    ++now;
+}
 
 void NumberAST::dump() {
     std::cout<<"%"<<now<<"="<<"add 0, "<<value<<std::endl;

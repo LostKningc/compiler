@@ -39,6 +39,7 @@ Operater   "+"|"-"|"*"|"/"|"="|">"|"<"|"!"
 "return"        { return RETURN; }
 "void"          { return VOID; }
 "float"         { return FLOAT; }
+"const"         { return CONST;}
 
 {Identifier}    { yylval.str_val = new string(yytext); return IDENT; }
 

@@ -23,7 +23,7 @@ void yyerror(std::unique_ptr<BaseAST> &ast,std::string s);
 using namespace std;
 
 extern sym_node *sym_head, *sym_tail, *sym_cur;
-
+extern std::unordered_map<std::string,std::pair<int,bool>> val_table;
 %}
 
 
@@ -34,23 +34,25 @@ extern sym_node *sym_head, *sym_tail, *sym_cur;
   std::string *str_val;
   int int_val;
   op op_val;
+  Btype btype_val;
   BaseAST *ast_val;
 }
 
 
-%token INT VOID FLOAT RETURN
+%token INT VOID FLOAT RETURN CONST
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
 %type <ast_val> DefUnit DefUnits
 %type <ast_val> FuncDef Block Stmt Sents Sent
 %type <ast_val> Assignments Assignment
-%type <ast_val> Declaration Declarations Declarationlist DeclarationType
+%type <ast_val> Declarationlist ConstDeclList ConstDefs ConstDef ConstExp VarDeclList VarDefs VarDef InitVal
 %type <ast_val> RelExp EqExp LAndExp LOrExp
 %type <ast_val> Exp AddExp MulExp PrimaryExp UnaryExp
 %type <op_val> UnaryOp
-%type <ast_val> Number
-%type <str_val> BasicType 
+%type <ast_val> Number LVal
+%type <ast_val> FunType
+%type <btype_val> BasicType BType
 
 %%
 
@@ -90,7 +92,7 @@ DefUnit
 
 
 FuncDef
-  : DeclarationType IDENT '(' ')' Block {
+  : FunType IDENT '(' ')' Block {
     auto ast=new FuncDefAST();
     ast->type = unique_ptr<BaseAST>($1);
     ast->ident = *unique_ptr<string>($2);
@@ -101,25 +103,30 @@ FuncDef
 
 //类型
 
-DeclarationType
+FunType
   : BasicType {
     auto ast = new DeclarationTypeAST();
-    ast->type = unique_ptr<string>($1);
+    ast->type = $1;
     $$ = ast;
   }
   ;
 
 
 BasicType: INT {
-  $$ = new string("i32");
+  $$ = Btype::BINT;
 }|
   VOID {
-    $$ = new string("void");
+    $$ = Btype::BVOID;
   }|
   FLOAT {
-    $$ = new string("float");
+    $$ = Btype::BFLOAT;
   }
   ;
+
+//变量用的
+BType:INT{
+  $$ = Btype::BINT;
+};
 
 Block
   : '{' Stmt '}' {
@@ -139,16 +146,21 @@ Stmt
 
 Sents
   :Sents Sent{
-    auto ast= new SentsAST();
-    ast->sents = unique_ptr<BaseAST>($1);
-    ast->sent=unique_ptr<BaseAST>($2);
-    $$=ast;
+    SentsAST* Sents = nullptr;
+
+      Sents = dynamic_cast<SentsAST*>($1);
+      //后续可能会改进
+      if(Sents==nullptr){
+        std::cerr << "Exception: " << "dynamic_cast failed"<< std::endl;
+      }
+
+    Sents->sents.push_back(unique_ptr<BaseAST>($2));
+    $$ = Sents;
   } |
     Sent {
-      auto ast = new SentsAST();
-      ast->sents = nullptr;
-      ast->sent = unique_ptr<BaseAST>($1);
-      $$ = ast;
+      auto Sents = new SentsAST();
+      Sents->sents.push_back(unique_ptr<BaseAST>($1));
+      $$ = Sents;
     }
   ;
 
@@ -172,6 +184,109 @@ Sent:
     $$=ast;
   }
   ;
+//声明变量的办法
+//重构DeclearationlistAST
+Declarationlist:
+  ConstDeclList {
+    $$ = $1;
+  }|
+  VarDeclList {
+    $$ = $1;
+  };
+
+//构造ConstDecllist树
+ConstDeclList:
+  CONST BType ConstDefs {
+    auto constdecllist = new ConstDeclListAST();
+    constdecllist->type = $2;
+    constdecllist->constdefs = unique_ptr<BaseAST>($3);
+    $$ = constdecllist;
+  }
+  ;
+VarDeclList:
+  BType VarDefs {
+    auto vardecllist = new VarDeclListAST();
+    vardecllist->type = $1;
+    vardecllist->vardefs = unique_ptr<BaseAST>($2);
+    $$ = vardecllist;
+  }
+  ;
+//构造ConstDefs树(需要更新一个vector)
+ConstDefs:
+  ConstDef {
+    auto Defs = new ConstDefsAST();
+    Defs->constdefs.push_back(unique_ptr<BaseAST>($1));
+    $$ = Defs;
+  }|
+  ConstDefs ',' ConstDef {
+    ConstDefsAST* defsast = nullptr;
+    defsast = dynamic_cast<ConstDefsAST*>($1);
+    //后续可能会改进
+    if(defsast==nullptr){
+        std::cerr << "Exception: " << "dynamic_cast failed"<< std::endl;
+      }
+    defsast->constdefs.push_back(unique_ptr<BaseAST>($3));
+    $$ = defsast;
+  }
+  ;
+
+//构造VarDefs树(需要更新一个vector)
+VarDefs:
+  VarDef {
+    auto Defs = new VarDefsAST();
+    Defs->vardefs.push_back(unique_ptr<BaseAST>($1));
+    $$ = Defs;
+  }|
+  VarDefs ',' VarDef {
+    VarDefsAST* defsast = nullptr;
+    defsast = dynamic_cast<VarDefsAST*>($1);
+    //后续可能会改进
+    if(defsast==nullptr){
+        std::cerr << "Exception: " << "dynamic_cast failed"<< std::endl;
+      }
+    defsast->vardefs.push_back(unique_ptr<BaseAST>($3));
+    $$ = defsast;
+  }
+  ;
+//构建树
+ConstDef:
+  IDENT '=' InitVal {
+    auto ast = new ConstDefAST();
+    ast->ident = *($1);
+    ast->initval = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  ;
+
+VarDef:
+  IDENT '=' InitVal {
+    auto ast = new VarDefAST();
+    ast->ident = *($1);
+    ast->initval = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  |IDENT {
+    auto ast = new VarDefAST();
+    ast->ident = *($1);
+    ast->initval = nullptr;
+    $$ = ast;
+  }
+  ;
+
+//获得变量的值
+InitVal:
+  ConstExp {
+    auto initval = new ConstExpAST();
+    initval->exp = unique_ptr<BaseAST>($1);
+    $$ = initval;
+  }
+  ;
+
+ConstExp:
+  Exp{
+    $$ =$1;
+  }
+  ;
 
 //表达式的部分
 //构造Exp树
@@ -188,6 +303,7 @@ LOrExp:
     lorexp->exp1 = unique_ptr<BaseAST>($1);
     lorexp->exp2 = unique_ptr<BaseAST>($4);
     lorexp->op2=op::OR;
+    //lorexp->calc_f=($1->calc_f)&&($4->calc_f);
     $$ = lorexp;
   }
   | LAndExp {
@@ -202,6 +318,7 @@ LAndExp:
     landexp->exp1 = unique_ptr<BaseAST>($1);
     landexp->exp2 = unique_ptr<BaseAST>($4);
     landexp->op2 = op::AND;
+    //landexp->calc_f=($1->calc_f)&&($4->calc_f);
     $$ = landexp;
   }
   | EqExp {
@@ -216,6 +333,7 @@ EqExp:
     eqexp->exp1 = unique_ptr<BaseAST>($1);
     eqexp->exp2 = unique_ptr<BaseAST>($4);
     eqexp->op2 = op::EQ;
+    //eqexp->calc_f=($1->calc_f)&&($4->calc_f);
     $$ = eqexp;
   }
   | EqExp '!' '=' RelExp {
@@ -223,6 +341,7 @@ EqExp:
     eqexp->exp1 = unique_ptr<BaseAST>($1);
     eqexp->exp2 = unique_ptr<BaseAST>($4);
     eqexp->op2 = op::NE;
+    //eqexp->calc_f=($1->calc_f)&&($4->calc_f);
     $$ = eqexp;
   }
   | RelExp {
@@ -233,32 +352,36 @@ EqExp:
 
 //构造RelExp树
 RelExp:
-  AddExp '>' AddExp {
+  RelExp '>' AddExp {
     auto relexp = new BinaryExpAST();
     relexp->exp1 = unique_ptr<BaseAST>($1);
     relexp->exp2 = unique_ptr<BaseAST>($3);
     relexp->op2 = op::GT;
+    //relexp->calc_f=($1->calc_f)&&($3->calc_f);
     $$ = relexp;
   }
-  | AddExp '<' AddExp {
+  | RelExp '<' AddExp {
     auto relexp = new BinaryExpAST();
     relexp->exp1 = unique_ptr<BaseAST>($1);
     relexp->exp2 = unique_ptr<BaseAST>($3);
     relexp->op2 = op::LT;
+    //relexp->calc_f=($1->calc_f)&&($3->calc_f);
     $$ = relexp;
   }
-  | AddExp '>''=' AddExp {
+  | RelExp '>''=' AddExp {
     auto relexp = new BinaryExpAST();
     relexp->exp1 = unique_ptr<BaseAST>($1);
     relexp->exp2 = unique_ptr<BaseAST>($4);
     relexp->op2 = op::GE;
+    //relexp->calc_f=($1->calc_f)&&($4->calc_f);
     $$ = relexp;
   }
-  | AddExp '<''=' AddExp {
+  | RelExp '<''=' AddExp {
     auto relexp = new BinaryExpAST();
     relexp->exp1 = unique_ptr<BaseAST>($1);
     relexp->exp2 = unique_ptr<BaseAST>($4);
     relexp->op2 = op::LE;
+    //relexp->calc_f=($1->calc_f)&&($4->calc_f);
     $$ = relexp;
   }
   | AddExp {
@@ -273,6 +396,7 @@ AddExp:
     addexp->exp1 = unique_ptr<BaseAST>($1);
     addexp->exp2 = unique_ptr<BaseAST>($3);
     addexp->op2 = op::ADD;
+    //addexp->calc_f=($1->calc_f)&&($3->calc_f);
     $$ = addexp;
   }
   | AddExp '-' MulExp {
@@ -280,6 +404,7 @@ AddExp:
     addexp->exp1 = unique_ptr<BaseAST>($1);
     addexp->exp2 = unique_ptr<BaseAST>($3);
     addexp->op2 = op::SUB;
+    //addexp->calc_f=($1->calc_f)&&($3->calc_f);
     $$ = addexp;
   }
   | MulExp {
@@ -294,6 +419,7 @@ MulExp:
     mulexp->exp1 = unique_ptr<BaseAST>($1);
     mulexp->op2 = op::MUL;
     mulexp->exp2 = unique_ptr<BaseAST>($3);
+    //mulexp->calc_f=($1->calc_f)&&($3->calc_f);
     $$ = mulexp;
   }
   | MulExp '/' UnaryExp {
@@ -301,6 +427,7 @@ MulExp:
     mulexp->exp1 = unique_ptr<BaseAST>($1);
     mulexp->op2 = op::DIV;
     mulexp->exp2 = unique_ptr<BaseAST>($3);
+    //mulexp->calc_f=($1->calc_f)&&($3->calc_f);
     $$ = mulexp;
   }
   | MulExp '%' UnaryExp {
@@ -308,6 +435,7 @@ MulExp:
     mulexp->exp1 = unique_ptr<BaseAST>($1);
     mulexp->op2 = op::MOD;
     mulexp->exp2 = unique_ptr<BaseAST>($3);
+    //mulexp->calc_f=($1->calc_f)&&($3->calc_f);
     $$ = mulexp;
   }
   |UnaryExp {
@@ -325,6 +453,7 @@ UnaryExp:
     auto ast = new UnaryExpAST();
     ast->op1 = $1;
     ast->exp1 = unique_ptr<BaseAST>($2);
+    //ast->calc_f=ast->exp1->calc_f;
     $$ = ast;
   }
   ;
@@ -347,67 +476,15 @@ PrimaryExp:
   }
   |Number {
     $$ = $1;
-  }
-  ;
-
-Declarationlist:
-  DeclarationType Declarations {
-    auto ast = new DeclarationlistAST();
-    ast->type = unique_ptr<BaseAST>($1);
-    ast->decls = unique_ptr<BaseAST>($2);
-    $$ = ast;
-  }
-  ;
-
-Declarations:
-  Declarations ',' Declaration {
-    auto ast = new DeclarationsAST();
-    ast->decls = unique_ptr<BaseAST>($1);
-    ast->decl = unique_ptr<BaseAST>($3);
-    $$ = ast;
-  }|Declaration {
-    auto ast = new DeclarationsAST();
-    ast->decls = nullptr;
-    ast->decl = unique_ptr<BaseAST>($1);
-    $$ = ast;
-  }
-  ;
-
-Declaration:
-  IDENT {
-    auto ast = new DeclarationAST();
-    ast->ident = *($1);
-    set_sym_val(sym_head,sym_tail,*($1),0);
-    ast->value = 0;
-    $$ = ast;
   }|
-  IDENT '=' Exp {
-    auto ast = new DeclarationAST();
-    ast->ident = *($1);
-    //set_sym_val(sym_head,sym_tail,*($1),$3);
-    //ast->value = $3;
-    ast->value = 0;
-    //$$ = ast;
-    $$=0;
+  LVal {
+    $$ = $1;
   }
   ;
 
 Assignments:
-  IDENT '=' Assignments {
-    auto assignsAst = new AssignsAST();
-    auto assignAst= new AssignAST();
-    assignsAst->assigns = unique_ptr<BaseAST>($3);
-    assignAst->ident = *($1);
-    assignAst->value = (dynamic_cast<AssignAST*>((dynamic_cast<AssignsAST*>((assignsAst->assigns).get()))->assign.get()))->value;
-    assignsAst->assign = unique_ptr<BaseAST>(assignAst);
-    set_sym_val(sym_head,sym_tail,*($1),assignAst->value);
-    $$=assignsAst;
-  }|
   Assignment {
-    auto ast = new AssignsAST();
-    ast->assigns=nullptr;
-    ast->assign=unique_ptr<BaseAST>($1);
-    $$=ast;
+    $$=$1;
   }
   ;
 
@@ -415,7 +492,7 @@ Assignment:
   IDENT '=' Exp {
     auto ast=new AssignAST();
     ast->ident=*($1);
-    //ast->value=$3;
+    ast->exp=unique_ptr<BaseAST>($3);
     //set_sym_val(sym_head,sym_tail,*($1),$3);
     $$=ast;
   }
@@ -426,9 +503,18 @@ Number
   : INT_CONST {
     auto ast = new NumberAST();
     ast->value = $1;
+    ast->calc_f=1;
     $$ = ast;
   }
   ;
+
+LVal:
+  IDENT {
+    auto ast = new LValAST();
+    ast->ident = *($1);
+    $$ = ast;
+  }
+  ; 
 %%
 
 void yyerror(std::unique_ptr<BaseAST> &ast,std::string s) {
