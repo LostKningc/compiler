@@ -177,7 +177,7 @@ void Visit(const koopa_raw_return_t &ret)
     switch (ret.value->kind.tag)
     {
     case KOOPA_RVT_BINARY:
-        std::cout << std::setw(6) << "mv" << "a0, " << reg_map[(koopa_raw_binary_t *)&ret.value->kind.data.binary] << std::endl;
+        std::cout << std::setw(6) << "lw" << "a0, " << stack_map[ret.value] << "(sp)" << std::endl;
         break;
     case KOOPA_RVT_INTEGER:
         // Visit(ret.value);
