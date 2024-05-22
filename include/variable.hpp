@@ -2,6 +2,7 @@
 #ifndef VARIABLE_HPP
 #define VARIABLE_HPP
 #include <string>
+#include<unordered_map>
 
 class sym_node {
   public:
@@ -9,6 +10,7 @@ class sym_node {
 	int value;
 	sym_node *prev, *next;
 };
+
 
 
 int get_sym_val(sym_node* &sym_head,std::string name, int * value);

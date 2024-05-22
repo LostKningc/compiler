@@ -17,11 +17,15 @@ using namespace std;
 // 你的代码编辑器/IDE 很可能找不到这个文件, 然后会给你报错 (虽然编译不会出错)
 // 看起来会很烦人, 于是干脆采用这种看起来 dirty 但实际很有效的手段
 sym_node *sym_head=nullptr, *sym_tail=nullptr, *sym_cur=nullptr;
+unordered_map<std::string,pair<int,bool>> val_table;
+
+
 
 extern FILE *yyin;
 extern int yyparse(std::unique_ptr<BaseAST> &ast);
 
 int now=0;
+
 void parseGrammar(string fname);
 
 

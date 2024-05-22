@@ -4,13 +4,18 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 enum op{ADD,SUB,MUL,DIV,MOD,GT,LT,LE,GE,EQ,NE,AND,OR,NOT,NONE};
+enum Btype{BINT,BFLOAT,BCHAR,BDOUBLE,BVOID};
 // 所有 AST 的基类
 class BaseAST {
  public:
   virtual ~BaseAST() = default;
   virtual void dump() = 0;
+  virtual int calc() {return 0;};
+  virtual void up_calc(){;};
+  bool calc_f = false;
 };
 
 // CompUnit 是 BaseAST
@@ -47,7 +52,7 @@ class FuncDefAST : public BaseAST {
 // DeclarationType 也是 BaseAST
 class DeclarationTypeAST: public BaseAST {
  public:
-  std::unique_ptr<std::string> type;
+  Btype type;
   void dump();
 };
 
@@ -70,8 +75,7 @@ class StmtAST : public BaseAST {
 //Sents 也是 BaseAST
 class SentsAST : public BaseAST {
  public:
-  std::unique_ptr<BaseAST> sents;
-  std::unique_ptr<BaseAST> sent;
+  std::vector<std::unique_ptr<BaseAST>> sents;
   void dump();
 };
 
@@ -92,29 +96,69 @@ class AssignsAST: public BaseAST {
 class AssignAST : public BaseAST {
  public:
   std::string ident;
-  int value;
+  std::unique_ptr<BaseAST> exp;
   void dump();
 };
 
-class DeclarationlistAST: public BaseAST {
- public:
-  std::unique_ptr<BaseAST> type;
-  std::unique_ptr<BaseAST> decls;
-  void dump();
-}; 
 
-class DeclarationsAST: public BaseAST {
+class ConstDeclListAST: public BaseAST {
  public:
-  std::unique_ptr<BaseAST> decls;
-  std::unique_ptr<BaseAST> decl;
+  std::unique_ptr<BaseAST> constdefs;
+  Btype type;
+  //TODO
   void dump();
 };
 
-class DeclarationAST : public BaseAST {
+class VarDeclListAST: public BaseAST {
+ public:
+  std::unique_ptr<BaseAST> vardefs;
+  Btype type;
+  //TODO
+  void dump();
+};
+
+class ConstDefsAST: public BaseAST {
+ public:
+ Btype type;
+  std::vector<std::unique_ptr<BaseAST>> constdefs;
+  //TODO
+  void dump();
+};
+
+class VarDefsAST: public BaseAST {
+ public:
+  Btype type;
+  std::vector<std::unique_ptr<BaseAST>> vardefs;
+  //TODO
+  void dump();
+};
+
+class ConstDefAST: public BaseAST {
  public:
   std::string ident;
-  int value;
-  void dump();
+  Btype type;
+  std::unique_ptr<BaseAST> initval;
+  //TODO
+  void dump() override;
+  int calc() override;
+};
+
+class VarDefAST: public BaseAST {
+ public:
+  std::string ident;
+  Btype type;
+  std::unique_ptr<BaseAST> initval;
+  //TODO
+  void dump() override;
+
+};
+
+class ConstExpAST: public BaseAST {
+ public:
+  std::unique_ptr<BaseAST> exp;
+  void up_calc() override;
+  void dump() override;
+  int calc() override;
 };
 
 class ReturnAST: public BaseAST {
@@ -133,7 +177,10 @@ class BinaryExpAST: public BaseAST {
   op op2;
   //第二个操作数
   std::unique_ptr<BaseAST> exp2;
-  void dump();
+  void dump() override;
+  //TODO:直接运算 
+  int calc() override;
+  void up_calc() override;
 };
 
 
@@ -141,7 +188,10 @@ class UnaryExpAST: public BaseAST {
  public:
   op op1;
   std::unique_ptr<BaseAST> exp1;
-  void dump();
+  void dump() override;
+  //Todo:直接运算
+  int calc() override;
+  void up_calc() override;
 };
 
 
@@ -149,6 +199,17 @@ class UnaryExpAST: public BaseAST {
 class NumberAST: public BaseAST {
  public:
   int value;
-  void dump();
+  void dump() override;
+  int calc() override{return value;}
+  void up_calc() override;
 };
+
+class LValAST: public BaseAST {
+ public:
+  std::string ident;
+  void dump() override;
+  int calc() override;
+  void up_calc() override;
+};
+
 #endif  // AST_HPP
