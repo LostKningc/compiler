@@ -1,27 +1,25 @@
-fun @main():i32 { 
+fun @main(): i32 {
 %entry:
-%0=add 0, 1
-%1=add 0, 2
-%2=add 0, 3
-%3= eq %2,0
-%4=add 0, 4
-%5= eq 0,%4
-%6= eq 0,%5
-%7= eq 0,%3
-%8= eq 0,%7
-%9= or %8,%6
-%10= mul %1,%9
-%11= add %0,%10
-%12=add 0, 5
-%13= lt %11,%12
-%14=add 0, 6
-%15= ne %13,%14
-%16=add 0, 7
-%17= sub 0,%16
-%18= eq 0,%17
-%19= eq 0,%18
-%20= eq 0,%15
-%21= eq 0,%20
-%22= and %21,%19
-ret %22
+  @a = alloc i32
+  store 2, @a
+  // if 的条件判断部分
+  %0 = load @a
+  br %0, %then, %else
+
+// if 语句的 if 分支
+%then:
+  %1 = load @a
+  %2 = add %1, 1
+  store %2, @a
+  jump %end
+
+// if 语句的 else 分支
+%else:
+  store 0, @a
+  jump %end
+
+// if 语句之后的内容, if/else 分支的交汇处
+%end:
+  %3 = load @a
+  ret %3
 }
