@@ -5,7 +5,7 @@ std::map<std::string, int> reg_count;
 std::stack<std::string> reg_stack;
 int size_of_stack_frame = 0;
 
-/////////////////////////
+//binary操作符对应的汇编指令
 const char *ir_asm_binaryop[] = {
     [KOOPA_RBO_NOT_EQ] = "snez",
     [KOOPA_RBO_EQ] = "seqz",
@@ -28,8 +28,6 @@ const char *ir_asm_binaryop[] = {
 // 访问 raw program
 void Visit(const koopa_raw_program_t &program)
 {
-    // 执行一些其他的必要操作
-    // ...
     // 初始化寄存器栈
     for (int i = 7; i >= 0; --i)
     {
@@ -110,17 +108,12 @@ void Visit(const koopa_raw_function_t &func)
         std::cout << std::setw(6) << "addi sp, sp, " << size_of_stack_frame << std::endl;
     }
 
-    // 执行一些其他的必要操作
-    // ...
-    // 访问所有基本块
     Visit(func->bbs);
 }
 
 // 访问基本块
 void Visit(const koopa_raw_basic_block_t &bb)
 {
-    // 执行一些其他的必要操作
-    // ...
     // 访问所有指令
     std::cout << bb->name + 1 << ":" << std::endl;
     Visit(bb->insts);
