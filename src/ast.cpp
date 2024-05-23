@@ -48,24 +48,24 @@ void DeclarationTypeAST::dump() {
 
 void BlockAST::dump() {
     val_table.EnterBlock();
-    if(stmt)
-        stmt->dump();
+    if(blockitems)
+        blockitems->dump();
     val_table.ExitBlock();
 }
 
 void StmtAST::dump() {
     //std::cout<<std::endl;
-    sents->dump();
+    sent->dump();
 }
 
-void SentsAST::dump() {
-    for(auto &sent:sents)
+void BlockItemsAST::dump() {
+    for(auto &item:itemlist)
     {
-        sent->dump();
+        item->dump();
     }
 }
 
-void SentAST::dump() {
+void BlockItemAST::dump() {
     //std::cout<<"Sent { ";
     content->dump();
     //std::cout<<" }";

@@ -61,26 +61,26 @@ class DeclarationTypeAST: public BaseAST {
 //Block 也是 BaseAST
 class BlockAST : public BaseAST {
  public:
-  std::unique_ptr<BaseAST> stmt;
+  std::unique_ptr<BaseAST> blockitems;
   void dump();
 };
 
 //Stmt 也是 BaseAST
 class StmtAST : public BaseAST {
  public:
-  std::unique_ptr<BaseAST> sents;
+  std::unique_ptr<BaseAST> sent;
   void dump();
 };
 
 //Sents 也是 BaseAST
-class SentsAST : public BaseAST {
+class BlockItemsAST : public BaseAST {
  public:
-  std::vector<std::unique_ptr<BaseAST>> sents;
+  std::vector<std::unique_ptr<BaseAST>> itemlist;
   void dump();
 };
 
 //Sent 也是 BaseAST
-class SentAST : public BaseAST {
+class BlockItemAST : public BaseAST {
  public:
   std::unique_ptr<BaseAST> content;
   void dump();

@@ -43,7 +43,7 @@ extern Val_Table val_table;
 %token <int_val> INT_CONST
 
 %type <ast_val> DefUnit DefUnits
-%type <ast_val> FuncDef Block Stmt Sents Sent
+%type <ast_val> FuncDef Block Stmt BlockItems BlockItem
 %type <ast_val> Assignments Assignment
 %type <ast_val> Declarationlist ConstDeclList ConstDefs ConstDef ConstExp VarDeclList VarDefs VarDef InitVal
 %type <ast_val> RelExp EqExp LAndExp LOrExp
@@ -82,7 +82,7 @@ DefUnit
     ast->content = unique_ptr<BaseAST>($1);
     $$=ast;
   }
-  |Sent {
+  |BlockItem {
     auto  ast = new DefUnitAST();
     ast->content = unique_ptr<BaseAST>($1);
     $$=ast;
@@ -128,82 +128,84 @@ BType:INT{
 };
 
 Block
-  : '{' Stmt '}' {
+  : '{' BlockItems '}' {
     auto ast=new BlockAST();
-    ast->stmt = unique_ptr<BaseAST>($2);
+    ast->blockitems = unique_ptr<BaseAST>($2);
     $$=ast;
   }|'{' '}'{
     auto ast=new BlockAST();
-    ast->stmt=nullptr;
+    ast->blockitems=nullptr;
     $$=ast;
   }
 
   ;
 
 Stmt
-  : Sents {
-    auto ast = new StmtAST();
-    ast->sents = unique_ptr<BaseAST>($1);
-    $$ = ast;
-  }
-  ;
-
-Sents
-  :Sents Sent{
-    SentsAST* Sents = nullptr;
-
-      Sents = dynamic_cast<SentsAST*>($1);
-      //后续可能会改进
-      if(Sents==nullptr){
-        std::cerr << "Exception: " << "dynamic_cast failed"<< std::endl;
-      }
-
-    Sents->sents.push_back(unique_ptr<BaseAST>($2));
-    $$ = Sents;
-  } |
-    Sent {
-      auto Sents = new SentsAST();
-      Sents->sents.push_back(unique_ptr<BaseAST>($1));
-      $$ = Sents;
-    }
-  ;
-
-//TODO:重构ReturnAST
-Sent:
+  : 
   Assignments ';' {
-    auto ast =new SentAST();
+    auto ast =new BlockItemAST();
     ast->content = unique_ptr<BaseAST>($1);
     $$=ast;
   }|
   RETURN Exp ';' {
-    auto ast = new SentAST();
+    auto ast = new BlockItemAST();
     auto retAst=new ReturnAST();
     retAst->retNum=unique_ptr<BaseAST>($2);
     ast->content=unique_ptr<BaseAST>(retAst);
     $$=ast;
   }
-  |Declarationlist ';'{
-    auto ast = new SentAST();
-    ast->content = unique_ptr<BaseAST>($1);
-    $$=ast;
-  }
   |OptionExp ';'{
-    auto ast = new SentAST();
+    auto ast = new BlockItemAST();
     ast->content = unique_ptr<BaseAST>($1);
     $$=ast;
   }
   | RETURN ';'{
-    auto ast = new SentAST();
+    auto ast = new BlockItemAST();
     auto retAst=new ReturnAST();
     retAst->retNum=nullptr;
     ast->content=unique_ptr<BaseAST>(retAst);
     $$=ast;
   }|
   Block{
-    auto ast = new SentAST();
+    auto ast = new BlockItemAST();
     ast->content = unique_ptr<BaseAST>($1);
     $$=ast;
   }
+  ;
+
+BlockItems
+  :BlockItems BlockItem{
+    BlockItemsAST* Items = nullptr;
+
+      Items = dynamic_cast<BlockItemsAST*>($1);
+      //后续可能会改进
+      if(Items==nullptr){
+        std::cerr << "Exception: " << "dynamic_cast failed"<< std::endl;
+      }
+
+    Items->itemlist.push_back(unique_ptr<BaseAST>($2));
+    $$ = Items;
+  } |
+    BlockItem {
+      auto Items = new BlockItemsAST();
+      Items->itemlist.push_back(unique_ptr<BaseAST>($1));
+      $$ = Items;
+    }
+  ;
+
+//TODO:重构ReturnAST
+BlockItem:
+  Declarationlist ';'{
+    auto ast = new BlockItemAST();
+    ast->content = unique_ptr<BaseAST>($1);
+    $$=ast;
+  }|
+  Stmt {
+    auto ast = new StmtAST();
+    ast->sent = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  
   ;
 
   OptionExp:
@@ -211,7 +213,8 @@ Sent:
       auto ast=new OptionExpAST();
       ast->exp=unique_ptr<BaseAST>($1);
       $$=ast;
-    }|
+    }
+    |
     {
       auto ast=new OptionExpAST();
       ast->exp=nullptr;
