@@ -3,37 +3,31 @@
 #include <iostream>
 using namespace std;
 extern int now;
-extern std::unordered_map<std::string,std::pair<int,bool>> val_table;
+extern Val_Table val_table;
 void CompUnitAST::dump() {
-    //std::cout<<"Compunit { \n";
     start->dump();
-    // std::cout<<" \n";
-    // std::cout<<" }";
-    // std::cout<<std::endl;
 }
 
 void DefUnitsAST::dump() {
     if(def_units!=nullptr)
     {
         def_units->dump();
-        //std::cout<<"\n";
+
     }
     def_unit->dump();
 }
 
 void DefUnitAST::dump() {
-    // std::cout<<"DefUnit { ";
     content->dump();
-    // std::cout<<" }";
 }
 
 void FuncDefAST::dump() {
-    //std::cout<<"FuncDef { ";
     std::cout<<"fun @"<<ident<<"():";
     type->dump();
-    //std::cout<<","<<ident<<",";
+    std::cout<<"{ "<<std::endl;
+    std::cout<<"\%entry:"<<std::endl;
     block->dump();
-    //std::cout<<" }";
+    std::cout<<" }";
 }
 
 void DeclarationTypeAST::dump() {
@@ -53,14 +47,14 @@ void DeclarationTypeAST::dump() {
 }
 
 void BlockAST::dump() {
-    std::cout<<"{ ";
-    stmt->dump();
-    std::cout<<" }";
+    val_table.EnterBlock();
+    if(stmt)
+        stmt->dump();
+    val_table.ExitBlock();
 }
 
 void StmtAST::dump() {
-    std::cout<<"\%entry:";
-    std::cout<<std::endl;
+    //std::cout<<std::endl;
     sents->dump();
 }
 
@@ -115,57 +109,55 @@ void ConstDefAST::dump(){
 }
 
 void VarDefAST::dump(){
-    //std::cout<<"VarDef { ";
-    std::cout<<"@"<<ident<<" = "<<"alloc ";
+    val_table.Record(ident,std::make_pair(0, false));
+    std::cout<<"@"<<val_table.Get_Name(ident)<<" = "<<"alloc ";
     if(type==Btype::BINT) cout<<"i32"<<std::endl;
-    //std::cout<<","<<ident<<",";
     if(initval!=nullptr)
     {
         initval->up_calc();
         if(initval->calc_f){
-            std::cout<<"store "<<initval->calc()<<", "<<"@"<<ident<<std::endl;
+            std::cout<<"store "<<initval->calc()<<", "<<"@"<<val_table.Get_Name(ident)<<std::endl;
         }
         else{
             initval->dump();
-            std::cout<<"store "<<"%"<<now-1<<", "<<"@"<<ident<<std::endl;
+            std::cout<<"store "<<"%"<<now-1<<", "<<"@"<<val_table.Get_Name(ident)<<std::endl;
         }
     }
     std::cout<<std::endl;
-    //std::cout<<" }";
 }
 void AssignsAST::dump() {
-    // if(assigns!=nullptr)
-    // {
-    //     assigns->dump();
-    //     std::cout<<",";
-    // }
-    // assign->dump();
+
 }
 
 void AssignAST::dump() {
-    if(val_table[ident].second){
+    if(val_table.get(ident).second){
         cerr<<"this is a const,can't be assigned"<<std::endl;
     }else{
         exp->up_calc();
         if(exp->calc_f){
-            std::cout<<"store "<<exp->calc()<<", "<<"@"<<ident<<std::endl;
+            std::cout<<"store "<<exp->calc()<<", "<<"@"<<val_table.Get_Name(ident)<<std::endl;
         }
         else{
             exp->dump();
-            std::cout<<"store "<<"%"<<now-1<<", "<<"@"<<ident<<std::endl;
+            std::cout<<"store "<<"%"<<now-1<<", "<<"@"<<val_table.Get_Name(ident)<<std::endl;
         }
     }
 }
 
 void ReturnAST::dump() {
     //此处需要更新
-    retNum->up_calc();
-    if(retNum->calc_f)
-        std::cout<<"ret "<<retNum->calc()<<std::endl;
-    else{
-        retNum->dump();
-        std::cout<<"ret "<<"%"<<now-1<<std::endl;
+    if(retNum)
+    {
+        retNum->up_calc();
+        if(retNum->calc_f)
+            std::cout<<"ret "<<retNum->calc()<<std::endl;
+        else{
+           retNum->dump();
+            std::cout<<"ret "<<"%"<<now-1<<std::endl;
+        }
     }
+    else
+        std::cout<<"ret"<<std::endl;
 }
 
 void ConstExpAST::dump() {
@@ -389,13 +381,21 @@ void UnaryExpAST::dump() {
 void LValAST::dump() {
 
     if(calc_f)
-        std::cout<<"%"<<now<<"= "<<"add 0, "<<val_table[ident].first<<std::endl;
+        std::cout<<"%"<<now<<"= "<<"add 0, "<<val_table.get(ident).first<<std::endl;
     else
-        std::cout<<"%"<<now<<"= "<<"load "<<"@"<<ident<<std::endl;
+        std::cout<<"%"<<now<<"= "<<"load "<<"@"<<val_table.Get_Name(ident)<<std::endl;
     ++now;
 }
 
 void NumberAST::dump() {
     std::cout<<"%"<<now<<"="<<"add 0, "<<value<<std::endl;
     ++now;
+}
+
+void OptionExpAST::dump() {
+    if(exp){
+        exp->up_calc();
+        if(!exp->calc_f)
+            exp->dump();
+    }
 }

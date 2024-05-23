@@ -3,11 +3,11 @@
 #include "variable.hpp"
 
 extern int now;
-extern std::unordered_map<std::string,std::pair<int,bool>> val_table;
+extern Val_Table val_table;
 
 int ConstDefAST::calc(){
-    val_table[ident]=std::pair<int,bool>(initval->calc(),1);
-    return val_table[ident].first;
+    val_table.Record(ident,std::make_pair(initval->calc(),true));
+    return val_table.get(ident).first;
 }
 
 int ConstExpAST::calc(){
@@ -66,7 +66,14 @@ int UnaryExpAST::calc(){
 
 //只有常量时才能调用
 int LValAST::calc(){
-    return val_table[ident].first;
+    return val_table.get(ident).first;
+}
+
+int OptionExpAST::calc(){
+    if(exp){
+        return exp->calc();
+    }
+    return 0;
 }
 
 //更新计算符号位
@@ -87,5 +94,16 @@ void NumberAST::up_calc(){
     calc_f=true;
 }
 void LValAST::up_calc(){
-    calc_f=val_table[ident].second;
+    calc_f=val_table.get(ident).second;
 }
+
+void OptionExpAST::up_calc(){
+    if(exp){
+        exp->up_calc();
+        calc_f=exp->calc_f;
+    }
+    else{
+        calc_f=false;
+    }
+}
+

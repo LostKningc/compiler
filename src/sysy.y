@@ -22,8 +22,7 @@ void yyerror(std::unique_ptr<BaseAST> &ast,std::string s);
 
 using namespace std;
 
-extern sym_node *sym_head, *sym_tail, *sym_cur;
-extern std::unordered_map<std::string,std::pair<int,bool>> val_table;
+extern Val_Table val_table;
 %}
 
 
@@ -48,7 +47,7 @@ extern std::unordered_map<std::string,std::pair<int,bool>> val_table;
 %type <ast_val> Assignments Assignment
 %type <ast_val> Declarationlist ConstDeclList ConstDefs ConstDef ConstExp VarDeclList VarDefs VarDef InitVal
 %type <ast_val> RelExp EqExp LAndExp LOrExp
-%type <ast_val> Exp AddExp MulExp PrimaryExp UnaryExp
+%type <ast_val> Exp AddExp MulExp PrimaryExp UnaryExp OptionExp
 %type <op_val> UnaryOp
 %type <ast_val> Number LVal
 %type <ast_val> FunType
@@ -133,7 +132,12 @@ Block
     auto ast=new BlockAST();
     ast->stmt = unique_ptr<BaseAST>($2);
     $$=ast;
+  }|'{' '}'{
+    auto ast=new BlockAST();
+    ast->stmt=nullptr;
+    $$=ast;
   }
+
   ;
 
 Stmt
@@ -183,7 +187,37 @@ Sent:
     ast->content = unique_ptr<BaseAST>($1);
     $$=ast;
   }
+  |OptionExp ';'{
+    auto ast = new SentAST();
+    ast->content = unique_ptr<BaseAST>($1);
+    $$=ast;
+  }
+  | RETURN ';'{
+    auto ast = new SentAST();
+    auto retAst=new ReturnAST();
+    retAst->retNum=nullptr;
+    ast->content=unique_ptr<BaseAST>(retAst);
+    $$=ast;
+  }|
+  Block{
+    auto ast = new SentAST();
+    ast->content = unique_ptr<BaseAST>($1);
+    $$=ast;
+  }
   ;
+
+  OptionExp:
+    Exp{
+      auto ast=new OptionExpAST();
+      ast->exp=unique_ptr<BaseAST>($1);
+      $$=ast;
+    }|
+    {
+      auto ast=new OptionExpAST();
+      ast->exp=nullptr;
+      $$ = ast;
+    }
+    ;
 //声明变量的办法
 //重构DeclearationlistAST
 Declarationlist:

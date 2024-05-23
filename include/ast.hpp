@@ -212,4 +212,12 @@ class LValAST: public BaseAST {
   void up_calc() override;
 };
 
+class OptionExpAST: public BaseAST {
+ public:
+  std::unique_ptr<BaseAST> exp;
+  void dump() override;
+  void up_calc() override;
+  int calc() override;
+};
+
 #endif  // AST_HPP

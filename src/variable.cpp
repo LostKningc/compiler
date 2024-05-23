@@ -1,46 +1,40 @@
 #include"variable.hpp"
+#include<iostream>
 
-int get_sym_val(sym_node* &sym_head,std::string name, int * value) {
-	sym_node* sym_cur = sym_head;
-	while(sym_cur!=nullptr) {
-		if(name==sym_cur->name)
-			break;
-		sym_cur = sym_cur->next;
-	}
-
-	if(sym_cur!=nullptr) {
-		*value = sym_cur->value;
-		return 1;
-	} else
-		return 0; 	
+void Val_Table::EnterBlock(){
+	map_counter++;
+	t_stack.push_back(Val_Map(map_counter));
 }
 
-int set_sym_val(sym_node* &sym_head,sym_node* &sym_tail,std::string name, int value) {
-	sym_node* sym_cur = sym_head;
-	while(sym_cur!=nullptr) {
-		if(sym_cur->name==name)
-			break;
-		sym_cur = sym_cur->next;
-	}
+void Val_Table::ExitBlock(){
+	t_stack.pop_back();
+}
 
-	if(sym_cur!=nullptr)
-		sym_cur->value = value;
-	else {
-		sym_cur = new sym_node();
-		sym_cur->name=name;
-		sym_cur->value = value;
-		sym_cur->prev = nullptr;
-		sym_cur->next = nullptr;
-		
-		if(sym_head == nullptr) {
-			sym_head = sym_cur;
-			sym_tail = sym_cur;
-		} else {
-			sym_tail->next = sym_cur;
-			sym_cur->prev = sym_tail;
-			sym_tail = sym_cur;
-		}
+const std::pair<int,bool>& Val_Table::get(std::string name) {
+	auto beg=t_stack.rbegin(),end=t_stack.rend();
+	for(auto it=beg;it!=end;++it){
+		auto& table=*it;
+		auto val=table.val_map.find(name);
+		if(val!=table.val_map.end())return val->second;
 	}
+	throw std::runtime_error("error: symbol \"" + name + "\" is not declared");
+}
 
-	return 1; 	
+void Val_Table::Record(std::string name,std::pair<int,bool> val){
+	t_stack.back().val_map[name]=val;
+}
+
+Val_Table::Val_Table(){
+	map_counter=0;
+	t_stack.push_back(Val_Map(map_counter));
+}
+
+std::string Val_Table::Get_Name(std::string prim_name){
+	auto beg=t_stack.rbegin(),end=t_stack.rend();
+	for(auto it=beg;it!=end;++it){
+		auto& table=*it;
+		auto val=table.val_map.find(prim_name);
+		if(val!=table.val_map.end())return "__filed"+std::to_string(table.field_idx)+"__"+prim_name;
+	}
+	throw std::runtime_error("error: symbol \"" + prim_name + "\" is not declared");
 }
