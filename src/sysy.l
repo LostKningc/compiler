@@ -45,6 +45,8 @@ Operater   "+"|"-"|"*"|"/"|"="|">"|"<"|"!"
 "else"          { return ELSE; }
 "while"         { return WHILE; }
 "for"           { return FOR; }
+"break"         { return BREAK; }
+"continue"      { return CONTINUE; }
 
 {Identifier}    { yylval.str_val = new string(yytext); return IDENT; }
 

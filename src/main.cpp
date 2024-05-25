@@ -23,7 +23,7 @@ extern FILE *yyin;
 extern int yyparse(std::unique_ptr<BaseAST> &ast);
 
 int now=0;
-int ifCounter=-1;
+
 BasicBlockManager bbm;//全局的一个基本块计数器
 
 

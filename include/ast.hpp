@@ -109,6 +109,24 @@ class IfElseAST: public BaseAST {
   void dump();
 };
 
+//while的AST
+class WhileAST: public BaseAST {
+ public:
+  std::unique_ptr<BaseAST> exp;
+  std::unique_ptr<BaseAST> body;
+  void dump();
+};
+
+class BreakAST: public BaseAST {
+ public:
+  void dump();
+};
+
+class ContinueAST: public BaseAST {
+ public:
+  void dump();
+};
+
 class ConstDeclListAST: public BaseAST {
  public:
   std::unique_ptr<BaseAST> constdefs;

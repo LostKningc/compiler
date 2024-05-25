@@ -39,7 +39,7 @@ extern Val_Table val_table;
 
 
 %token INT VOID FLOAT RETURN CONST
-%token IF ELSE WHILE FOR
+%token IF ELSE WHILE BREAK CONTINUE FOR
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
@@ -142,7 +142,42 @@ Block
 
   ;
 
-Stmt
+
+BlockItems
+  :BlockItems BlockItem{
+    BlockItemsAST* Items = nullptr;
+
+      Items = dynamic_cast<BlockItemsAST*>($1);
+      //后续可能会改进
+      if(Items==nullptr){
+        std::cerr << "Exception: " << "dynamic_cast failed"<< std::endl;
+      }
+
+    Items->itemlist.push_back(unique_ptr<BaseAST>($2));
+    $$ = Items;
+  } |
+    BlockItem {
+      auto Items = new BlockItemsAST();
+      Items->itemlist.push_back(unique_ptr<BaseAST>($1));
+      $$ = Items;
+    }
+  ;
+
+//TODO:重构ReturnAST
+BlockItem:
+  Declarationlist ';'{
+    auto ast = new BlockItemAST();
+    ast->content = unique_ptr<BaseAST>($1);
+    $$=ast;
+  }|
+  Stmt {
+    auto ast = new StmtAST();
+    ast->sent = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  ;
+
+  Stmt
   : 
   Assignments ';' {
     auto ast =new BlockItemAST();
@@ -179,8 +214,24 @@ Stmt
     ast->then_part=unique_ptr<BaseAST>($5);
     ast->else_part=unique_ptr<BaseAST>($6);
     $$=ast; 
-  } 
+  }|
+  WHILE '(' Exp ')' Stmt{
+    auto ast=new WhileAST();
+    ast->exp=unique_ptr<BaseAST>($3);
+    ast->body=unique_ptr<BaseAST>($5);
+    $$=ast;
+  }|
+  BREAK ';'{
+    auto ast=new BreakAST();
+    $$=ast;
+  }|
+  CONTINUE ';'{
+    auto ast=new ContinueAST();
+    $$=ast;
+  }
   ;
+
+
 
 Else:
   ELSE Stmt{
@@ -191,40 +242,6 @@ Else:
     $$=nullptr;
   }
 
-BlockItems
-  :BlockItems BlockItem{
-    BlockItemsAST* Items = nullptr;
-
-      Items = dynamic_cast<BlockItemsAST*>($1);
-      //后续可能会改进
-      if(Items==nullptr){
-        std::cerr << "Exception: " << "dynamic_cast failed"<< std::endl;
-      }
-
-    Items->itemlist.push_back(unique_ptr<BaseAST>($2));
-    $$ = Items;
-  } |
-    BlockItem {
-      auto Items = new BlockItemsAST();
-      Items->itemlist.push_back(unique_ptr<BaseAST>($1));
-      $$ = Items;
-    }
-  ;
-
-//TODO:重构ReturnAST
-BlockItem:
-  Declarationlist ';'{
-    auto ast = new BlockItemAST();
-    ast->content = unique_ptr<BaseAST>($1);
-    $$=ast;
-  }|
-  Stmt {
-    auto ast = new StmtAST();
-    ast->sent = unique_ptr<BaseAST>($1);
-    $$ = ast;
-  }
-  
-  ;
 
   OptionExp:
     Exp{
