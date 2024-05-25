@@ -1,9 +1,14 @@
 #include "ast.hpp"
 #include"variable.hpp"
+#include"basicblock.hpp"
 #include <iostream>
 using namespace std;
+
 extern int now;
+extern int ifCounter;
 extern Val_Table val_table;
+extern BasicBlockManager bbm;
+
 void CompUnitAST::dump() {
     start->dump();
 }
@@ -25,7 +30,9 @@ void FuncDefAST::dump() {
     std::cout<<"fun @"<<ident<<"():";
     type->dump();
     std::cout<<"{ "<<std::endl;
-    std::cout<<"\%entry:"<<std::endl;
+    std::cout<<"%entry:"<<std::endl;
+    //进{}和进basicblock不一样
+    bbm.enterBasicBlock();
     block->dump();
     std::cout<<" }";
 }
@@ -54,7 +61,6 @@ void BlockAST::dump() {
 }
 
 void StmtAST::dump() {
-    //std::cout<<std::endl;
     sent->dump();
 }
 
@@ -67,7 +73,8 @@ void BlockItemsAST::dump() {
 
 void BlockItemAST::dump() {
     //std::cout<<"Sent { ";
-    content->dump();
+    if(!bbm.CheckEndBl())
+        content->dump();
     //std::cout<<" }";
 }
 
@@ -125,6 +132,48 @@ void VarDefAST::dump(){
     }
     std::cout<<std::endl;
 }
+
+//ifelse块的打印
+void IfElseAST::dump(){
+    exp->up_calc();
+    ++ifCounter;
+    //给br语句用的then的lable,ifCounter是避免重复命名用的
+    std::string thenLable="%then"+to_string(ifCounter);
+    std::string elseLable="%else"+to_string(ifCounter);
+    std::string mergeLable="%merge"+to_string(ifCounter);
+    if(!else_part) elseLable=mergeLable; 
+    //打印br语句
+    if(exp->calc_f)
+        std::cout<<"br "<<exp->calc()<<", "<<thenLable<<", "<<elseLable<<std::endl;
+    else{
+        exp->dump();
+        std::cout<<"br "<<"%"<<now-1<<", "<<thenLable<<", "<<elseLable<<std::endl;
+    }
+    std::cout<<std::endl;
+    //打印thenpart
+    std::cout<<thenLable<<":"<<std::endl;
+    bbm.enterBasicBlock();
+    then_part->dump();
+    if(!bbm.CheckEndBl()){
+        std::cout<<"jump "<<mergeLable<<std::endl;
+        bbm.generateRetOrJump();
+    }
+
+    //打印elsepart
+    if(else_part){
+        std::cout<<elseLable<<":"<<std::endl;
+        bbm.enterBasicBlock();
+        else_part->dump();
+        if(!bbm.CheckEndBl()){
+            std::cout<<"jump "<<mergeLable<<std::endl;
+            bbm.generateRetOrJump();
+        }
+    }
+
+    //打印merge部分
+    std::cout<<mergeLable<<":"<<std::endl;
+    bbm.enterBasicBlock();
+}
 void AssignsAST::dump() {
 
 }
@@ -158,6 +207,7 @@ void ReturnAST::dump() {
     }
     else
         std::cout<<"ret"<<std::endl;
+    bbm.generateRetOrJump();
 }
 
 void ConstExpAST::dump() {

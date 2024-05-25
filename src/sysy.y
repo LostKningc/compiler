@@ -39,6 +39,7 @@ extern Val_Table val_table;
 
 
 %token INT VOID FLOAT RETURN CONST
+%token IF ELSE WHILE FOR
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
@@ -51,6 +52,7 @@ extern Val_Table val_table;
 %type <op_val> UnaryOp
 %type <ast_val> Number LVal
 %type <ast_val> FunType
+%type <ast_val> Else
 %type <btype_val> BasicType BType
 
 %%
@@ -170,8 +172,24 @@ Stmt
     auto ast = new BlockItemAST();
     ast->content = unique_ptr<BaseAST>($1);
     $$=ast;
-  }
+  }|
+  IF '(' Exp ')' Stmt Else{
+    auto ast=new IfElseAST();
+    ast->exp=unique_ptr<BaseAST>($3);
+    ast->then_part=unique_ptr<BaseAST>($5);
+    ast->else_part=unique_ptr<BaseAST>($6);
+    $$=ast; 
+  } 
   ;
+
+Else:
+  ELSE Stmt{
+    $$=$2;
+  }
+  |
+  {
+    $$=nullptr;
+  }
 
 BlockItems
   :BlockItems BlockItem{
@@ -307,6 +325,22 @@ VarDef:
     ast->ident = *($1);
     ast->initval = nullptr;
     $$ = ast;
+  }
+  ;
+
+Assignments:
+    Assignment {
+    $$=$1;
+  }
+  ;
+
+Assignment:
+  IDENT '=' Exp {
+    auto ast=new AssignAST();
+    ast->ident=*($1);
+    ast->exp=unique_ptr<BaseAST>($3);
+    //set_sym_val(sym_head,sym_tail,*($1),$3);
+    $$=ast;
   }
   ;
 
@@ -516,22 +550,6 @@ PrimaryExp:
   }|
   LVal {
     $$ = $1;
-  }
-  ;
-
-Assignments:
-  Assignment {
-    $$=$1;
-  }
-  ;
-
-Assignment:
-  IDENT '=' Exp {
-    auto ast=new AssignAST();
-    ast->ident=*($1);
-    ast->exp=unique_ptr<BaseAST>($3);
-    //set_sym_val(sym_head,sym_tail,*($1),$3);
-    $$=ast;
   }
   ;
 

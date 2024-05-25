@@ -100,6 +100,14 @@ class AssignAST : public BaseAST {
   void dump();
 };
 
+//if/else的AST
+class IfElseAST: public BaseAST {
+ public:
+  std::unique_ptr<BaseAST> exp;
+  std::unique_ptr<BaseAST> then_part;
+  std::unique_ptr<BaseAST> else_part;
+  void dump();
+};
 
 class ConstDeclListAST: public BaseAST {
  public:
