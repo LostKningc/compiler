@@ -8,6 +8,7 @@
 #include "variable.hpp"
 #include "ast.hpp"
 #include "IRtoAsm.hpp"
+#include "basicblock.hpp"
 
 using namespace std;
 
@@ -22,6 +23,9 @@ extern FILE *yyin;
 extern int yyparse(std::unique_ptr<BaseAST> &ast);
 
 int now=0;
+
+BasicBlockManager bbm;//全局的一个基本块计数器
+
 
 void parseGrammar(string fname);
 

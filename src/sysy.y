@@ -39,6 +39,7 @@ extern Val_Table val_table;
 
 
 %token INT VOID FLOAT RETURN CONST
+%token IF ELSE WHILE BREAK CONTINUE FOR
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
@@ -51,6 +52,7 @@ extern Val_Table val_table;
 %type <op_val> UnaryOp
 %type <ast_val> Number LVal
 %type <ast_val> FunType
+%type <ast_val> Else
 %type <btype_val> BasicType BType
 
 %%
@@ -140,38 +142,6 @@ Block
 
   ;
 
-Stmt
-  : 
-  Assignments ';' {
-    auto ast =new BlockItemAST();
-    ast->content = unique_ptr<BaseAST>($1);
-    $$=ast;
-  }|
-  RETURN Exp ';' {
-    auto ast = new BlockItemAST();
-    auto retAst=new ReturnAST();
-    retAst->retNum=unique_ptr<BaseAST>($2);
-    ast->content=unique_ptr<BaseAST>(retAst);
-    $$=ast;
-  }
-  |OptionExp ';'{
-    auto ast = new BlockItemAST();
-    ast->content = unique_ptr<BaseAST>($1);
-    $$=ast;
-  }
-  | RETURN ';'{
-    auto ast = new BlockItemAST();
-    auto retAst=new ReturnAST();
-    retAst->retNum=nullptr;
-    ast->content=unique_ptr<BaseAST>(retAst);
-    $$=ast;
-  }|
-  Block{
-    auto ast = new BlockItemAST();
-    ast->content = unique_ptr<BaseAST>($1);
-    $$=ast;
-  }
-  ;
 
 BlockItems
   :BlockItems BlockItem{
@@ -205,8 +175,73 @@ BlockItem:
     ast->sent = unique_ptr<BaseAST>($1);
     $$ = ast;
   }
-  
   ;
+
+  Stmt
+  : 
+  Assignments ';' {
+    auto ast =new BlockItemAST();
+    ast->content = unique_ptr<BaseAST>($1);
+    $$=ast;
+  }|
+  RETURN Exp ';' {
+    auto ast = new BlockItemAST();
+    auto retAst=new ReturnAST();
+    retAst->retNum=unique_ptr<BaseAST>($2);
+    ast->content=unique_ptr<BaseAST>(retAst);
+    $$=ast;
+  }
+  |OptionExp ';'{
+    auto ast = new BlockItemAST();
+    ast->content = unique_ptr<BaseAST>($1);
+    $$=ast;
+  }
+  | RETURN ';'{
+    auto ast = new BlockItemAST();
+    auto retAst=new ReturnAST();
+    retAst->retNum=nullptr;
+    ast->content=unique_ptr<BaseAST>(retAst);
+    $$=ast;
+  }|
+  Block{
+    auto ast = new BlockItemAST();
+    ast->content = unique_ptr<BaseAST>($1);
+    $$=ast;
+  }|
+  IF '(' Exp ')' Stmt Else{
+    auto ast=new IfElseAST();
+    ast->exp=unique_ptr<BaseAST>($3);
+    ast->then_part=unique_ptr<BaseAST>($5);
+    ast->else_part=unique_ptr<BaseAST>($6);
+    $$=ast; 
+  }|
+  WHILE '(' Exp ')' Stmt{
+    auto ast=new WhileAST();
+    ast->exp=unique_ptr<BaseAST>($3);
+    ast->body=unique_ptr<BaseAST>($5);
+    $$=ast;
+  }|
+  BREAK ';'{
+    auto ast=new BreakAST();
+    $$=ast;
+  }|
+  CONTINUE ';'{
+    auto ast=new ContinueAST();
+    $$=ast;
+  }
+  ;
+
+
+
+Else:
+  ELSE Stmt{
+    $$=$2;
+  }
+  |
+  {
+    $$=nullptr;
+  }
+
 
   OptionExp:
     Exp{
@@ -307,6 +342,22 @@ VarDef:
     ast->ident = *($1);
     ast->initval = nullptr;
     $$ = ast;
+  }
+  ;
+
+Assignments:
+    Assignment {
+    $$=$1;
+  }
+  ;
+
+Assignment:
+  IDENT '=' Exp {
+    auto ast=new AssignAST();
+    ast->ident=*($1);
+    ast->exp=unique_ptr<BaseAST>($3);
+    //set_sym_val(sym_head,sym_tail,*($1),$3);
+    $$=ast;
   }
   ;
 
@@ -516,22 +567,6 @@ PrimaryExp:
   }|
   LVal {
     $$ = $1;
-  }
-  ;
-
-Assignments:
-  Assignment {
-    $$=$1;
-  }
-  ;
-
-Assignment:
-  IDENT '=' Exp {
-    auto ast=new AssignAST();
-    ast->ident=*($1);
-    ast->exp=unique_ptr<BaseAST>($3);
-    //set_sym_val(sym_head,sym_tail,*($1),$3);
-    $$=ast;
   }
   ;
 
