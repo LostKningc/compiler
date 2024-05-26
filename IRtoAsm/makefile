@@ -1,5 +1,5 @@
 all:
-	g++ *.cpp -L$(CDE_LIBRARY_PATH)/native -lkoopa
+	g++ ../src/IRtoAsm.cpp ../src/visit.cpp unitTest.cpp -L$(CDE_LIBRARY_PATH)/native -lkoopa
 
 testasm: all
 	./a.out
