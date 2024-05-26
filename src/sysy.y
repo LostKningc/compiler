@@ -39,11 +39,12 @@ extern Val_Table val_table;
 
 
 %token INT VOID FLOAT RETURN CONST
+%token IF ELSE WHILE BREAK CONTINUE FOR
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
 %type <ast_val> DefUnit DefUnits
-%type <ast_val> FuncDef Block Stmt Sents Sent
+%type <ast_val> FuncDef Block Stmt BlockItems BlockItem
 %type <ast_val> Assignments Assignment
 %type <ast_val> Declarationlist ConstDeclList ConstDefs ConstDef ConstExp VarDeclList VarDefs VarDef InitVal
 %type <ast_val> RelExp EqExp LAndExp LOrExp
@@ -51,6 +52,7 @@ extern Val_Table val_table;
 %type <op_val> UnaryOp
 %type <ast_val> Number LVal
 %type <ast_val> FunType
+%type <ast_val> Else
 %type <btype_val> BasicType BType
 
 %%
@@ -82,7 +84,7 @@ DefUnit
     ast->content = unique_ptr<BaseAST>($1);
     $$=ast;
   }
-  |Sent {
+  |BlockItem {
     auto  ast = new DefUnitAST();
     ast->content = unique_ptr<BaseAST>($1);
     $$=ast;
@@ -128,90 +130,126 @@ BType:INT{
 };
 
 Block
-  : '{' Stmt '}' {
+  : '{' BlockItems '}' {
     auto ast=new BlockAST();
-    ast->stmt = unique_ptr<BaseAST>($2);
+    ast->blockitems = unique_ptr<BaseAST>($2);
     $$=ast;
   }|'{' '}'{
     auto ast=new BlockAST();
-    ast->stmt=nullptr;
+    ast->blockitems=nullptr;
     $$=ast;
   }
 
   ;
 
-Stmt
-  : Sents {
-    auto ast = new StmtAST();
-    ast->sents = unique_ptr<BaseAST>($1);
-    $$ = ast;
-  }
-  ;
 
-Sents
-  :Sents Sent{
-    SentsAST* Sents = nullptr;
+BlockItems
+  :BlockItems BlockItem{
+    BlockItemsAST* Items = nullptr;
 
-      Sents = dynamic_cast<SentsAST*>($1);
+      Items = dynamic_cast<BlockItemsAST*>($1);
       //后续可能会改进
-      if(Sents==nullptr){
+      if(Items==nullptr){
         std::cerr << "Exception: " << "dynamic_cast failed"<< std::endl;
       }
 
-    Sents->sents.push_back(unique_ptr<BaseAST>($2));
-    $$ = Sents;
+    Items->itemlist.push_back(unique_ptr<BaseAST>($2));
+    $$ = Items;
   } |
-    Sent {
-      auto Sents = new SentsAST();
-      Sents->sents.push_back(unique_ptr<BaseAST>($1));
-      $$ = Sents;
+    BlockItem {
+      auto Items = new BlockItemsAST();
+      Items->itemlist.push_back(unique_ptr<BaseAST>($1));
+      $$ = Items;
     }
   ;
 
 //TODO:重构ReturnAST
-Sent:
+BlockItem:
+  Declarationlist ';'{
+    auto ast = new BlockItemAST();
+    ast->content = unique_ptr<BaseAST>($1);
+    $$=ast;
+  }|
+  Stmt {
+    auto ast = new StmtAST();
+    ast->sent = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  ;
+
+  Stmt
+  : 
   Assignments ';' {
-    auto ast =new SentAST();
+    auto ast =new BlockItemAST();
     ast->content = unique_ptr<BaseAST>($1);
     $$=ast;
   }|
   RETURN Exp ';' {
-    auto ast = new SentAST();
+    auto ast = new BlockItemAST();
     auto retAst=new ReturnAST();
     retAst->retNum=unique_ptr<BaseAST>($2);
     ast->content=unique_ptr<BaseAST>(retAst);
     $$=ast;
   }
-  |Declarationlist ';'{
-    auto ast = new SentAST();
-    ast->content = unique_ptr<BaseAST>($1);
-    $$=ast;
-  }
   |OptionExp ';'{
-    auto ast = new SentAST();
+    auto ast = new BlockItemAST();
     ast->content = unique_ptr<BaseAST>($1);
     $$=ast;
   }
   | RETURN ';'{
-    auto ast = new SentAST();
+    auto ast = new BlockItemAST();
     auto retAst=new ReturnAST();
     retAst->retNum=nullptr;
     ast->content=unique_ptr<BaseAST>(retAst);
     $$=ast;
   }|
   Block{
-    auto ast = new SentAST();
+    auto ast = new BlockItemAST();
     ast->content = unique_ptr<BaseAST>($1);
+    $$=ast;
+  }|
+  IF '(' Exp ')' Stmt Else{
+    auto ast=new IfElseAST();
+    ast->exp=unique_ptr<BaseAST>($3);
+    ast->then_part=unique_ptr<BaseAST>($5);
+    ast->else_part=unique_ptr<BaseAST>($6);
+    $$=ast; 
+  }|
+  WHILE '(' Exp ')' Stmt{
+    auto ast=new WhileAST();
+    ast->exp=unique_ptr<BaseAST>($3);
+    ast->body=unique_ptr<BaseAST>($5);
+    $$=ast;
+  }|
+  BREAK ';'{
+    auto ast=new BreakAST();
+    $$=ast;
+  }|
+  CONTINUE ';'{
+    auto ast=new ContinueAST();
     $$=ast;
   }
   ;
+
+
+
+Else:
+  ELSE Stmt{
+    $$=$2;
+  }
+  |
+  {
+    $$=nullptr;
+  }
+
 
   OptionExp:
     Exp{
       auto ast=new OptionExpAST();
       ast->exp=unique_ptr<BaseAST>($1);
       $$=ast;
-    }|
+    }
+    |
     {
       auto ast=new OptionExpAST();
       ast->exp=nullptr;
@@ -304,6 +342,22 @@ VarDef:
     ast->ident = *($1);
     ast->initval = nullptr;
     $$ = ast;
+  }
+  ;
+
+Assignments:
+    Assignment {
+    $$=$1;
+  }
+  ;
+
+Assignment:
+  IDENT '=' Exp {
+    auto ast=new AssignAST();
+    ast->ident=*($1);
+    ast->exp=unique_ptr<BaseAST>($3);
+    //set_sym_val(sym_head,sym_tail,*($1),$3);
+    $$=ast;
   }
   ;
 
@@ -513,22 +567,6 @@ PrimaryExp:
   }|
   LVal {
     $$ = $1;
-  }
-  ;
-
-Assignments:
-  Assignment {
-    $$=$1;
-  }
-  ;
-
-Assignment:
-  IDENT '=' Exp {
-    auto ast=new AssignAST();
-    ast->ident=*($1);
-    ast->exp=unique_ptr<BaseAST>($3);
-    //set_sym_val(sym_head,sym_tail,*($1),$3);
-    $$=ast;
   }
   ;
 

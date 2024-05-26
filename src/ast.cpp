@@ -1,9 +1,13 @@
 #include "ast.hpp"
 #include"variable.hpp"
+#include"basicblock.hpp"
 #include <iostream>
 using namespace std;
+
 extern int now;
 extern Val_Table val_table;
+extern BasicBlockManager bbm;
+
 void CompUnitAST::dump() {
     start->dump();
 }
@@ -25,7 +29,7 @@ void FuncDefAST::dump() {
     std::cout<<"fun @"<<ident<<"():";
     type->dump();
     std::cout<<"{ "<<std::endl;
-    std::cout<<"\%entry:"<<std::endl;
+    bbm.CreateBasicBlock("entry");
     block->dump();
     std::cout<<" }";
 }
@@ -48,26 +52,26 @@ void DeclarationTypeAST::dump() {
 
 void BlockAST::dump() {
     val_table.EnterBlock();
-    if(stmt)
-        stmt->dump();
+    if(blockitems)
+        blockitems->dump();
     val_table.ExitBlock();
 }
 
 void StmtAST::dump() {
-    //std::cout<<std::endl;
-    sents->dump();
+    sent->dump();
 }
 
-void SentsAST::dump() {
-    for(auto &sent:sents)
+void BlockItemsAST::dump() {
+    for(auto &item:itemlist)
     {
-        sent->dump();
+        item->dump();
     }
 }
 
-void SentAST::dump() {
+void BlockItemAST::dump() {
     //std::cout<<"Sent { ";
-    content->dump();
+    if(!bbm.CheckEndBl())
+        content->dump();
     //std::cout<<" }";
 }
 
@@ -125,6 +129,79 @@ void VarDefAST::dump(){
     }
     std::cout<<std::endl;
 }
+
+//ifelse块的打印
+void IfElseAST::dump(){
+    exp->up_calc();
+    ++bbm.ifCounter;
+    if(bbm.CheckEndBl()) return;
+    //给br语句用的then的lable,ifCounter是避免重复命名用的
+    std::string thenLable="then"+to_string(bbm.ifCounter);
+    std::string elseLable="else"+to_string(bbm.ifCounter);
+    std::string mergeLable="merge"+to_string(bbm.ifCounter);
+    if(!else_part) elseLable=mergeLable; 
+    //打印br语句
+    if(exp->calc_f)
+        bbm.BlockBranch(exp->calc(),thenLable,elseLable);
+    else{
+        exp->dump();
+        bbm.BlockBranch("%"+to_string(now-1),thenLable,elseLable);
+    }
+    
+    std::cout<<std::endl;
+    //打印thenpart
+    bbm.CreateBasicBlock(thenLable);
+    then_part->dump();
+    bbm.BlockJump(mergeLable);
+
+    //打印elsepart
+    if(else_part){
+        bbm.CreateBasicBlock(elseLable);
+        else_part->dump();
+        bbm.BlockJump(mergeLable); 
+    }
+
+    //打印merge部分
+    bbm.CreateBasicBlock(mergeLable);
+
+}
+
+void WhileAST::dump(){
+    exp->up_calc();
+    ++bbm.whileCounter;
+    if(bbm.CheckEndBl()) return;
+    //给br语句用的then的lable,ifCounter是避免重复命名用的
+    std::string whileLable="while_entry"+to_string(bbm.whileCounter);
+    std::string bodyLable="while_body"+to_string(bbm.whileCounter);
+    std::string mergeLable="while_end"+to_string(bbm.whileCounter);
+    //打印br语句
+    bbm.BlockJump(whileLable);
+    bbm.CreateBasicBlock(whileLable);
+    bbm.while_stack.push_back(bbm.whileCounter);
+    if(exp->calc_f)
+        bbm.BlockBranch(exp->calc(),bodyLable,mergeLable);
+    else{
+        exp->dump();
+        bbm.BlockBranch("%"+to_string(now-1),bodyLable,mergeLable);
+    }
+    std::cout<<std::endl;
+    //打印body部分
+    bbm.CreateBasicBlock(bodyLable);
+    body->dump();
+    bbm.BlockJump(whileLable);
+    //打印merge部分
+    bbm.CreateBasicBlock(mergeLable);
+    bbm.while_stack.pop_back();
+}
+
+void BreakAST::dump(){
+    bbm.BlockJump("while_end"+to_string(bbm.while_stack.back()));
+}
+
+void ContinueAST::dump(){
+    bbm.BlockJump("while_entry"+to_string(bbm.while_stack.back()));
+}
+
 void AssignsAST::dump() {
 
 }
@@ -144,6 +221,7 @@ void AssignAST::dump() {
     }
 }
 
+
 void ReturnAST::dump() {
     //此处需要更新
     if(retNum)
@@ -158,6 +236,7 @@ void ReturnAST::dump() {
     }
     else
         std::cout<<"ret"<<std::endl;
+    bbm.generateRetOrJump();
 }
 
 void ConstExpAST::dump() {
