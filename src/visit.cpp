@@ -34,11 +34,11 @@ const char *ir_asm_binaryop[] = {
 void Visit(const koopa_raw_program_t &program)
 {
     // 初始化寄存器栈
-    for (int i = 7; i >= 0; --i)
-    {
-        std::string str = "a" + std::to_string(i);
-        reg_stack.push(str);
-    }
+    // for (int i = 7; i >= 0; --i)
+    // {
+    //     std::string str = "a" + std::to_string(i);
+    //     reg_stack.push(str);
+    // }
     for (int i = 6; i >= 0; --i)
     {
         std::string str = "t" + std::to_string(i);
@@ -155,7 +155,7 @@ void Visit(const koopa_raw_function_t &func)
     for (int i = 0; i < MIN(func->params.len, 8); i++)
     {
         koopa_raw_value_t value = (koopa_raw_value_t)(func->params.buffer[i]);
-        stack_map.insert({value, -(i + 10)});
+        stack_map.insert({value, (i - 10)});
     }
     for (int i = 8; i < func->params.len; i++)
     {
@@ -344,7 +344,7 @@ void Visit(const koopa_raw_binary_t &binary, const koopa_raw_value_t &value, con
     }
     if (!rhs_is_integer)
     {
-        if (stack_map[binary.lhs] >= 0)
+        if (stack_map[binary.rhs] >= 0)
         {
             std::string rhs_reg;
             if (reg_stack.empty())
@@ -358,6 +358,7 @@ void Visit(const koopa_raw_binary_t &binary, const koopa_raw_value_t &value, con
         else
         {
             rhs = "a" + std::to_string(stack_map[binary.rhs] + 10);
+            std::cerr << stack_map[binary.rhs] << std::endl;
         }
     }
     else
@@ -502,6 +503,7 @@ void Visit(const koopa_raw_store_t &store)
     if (reg_stack.empty())
         assert(false);
     reg = reg_stack.top();
+    reg_stack.pop();
     bool value_is_imm = store.value->kind.tag == KOOPA_RVT_INTEGER;
     if (value_is_imm)
         std::cout << std::setw(6) << "li" << reg << ", " << store.value->kind.data.integer.value << std::endl;
@@ -513,7 +515,16 @@ void Visit(const koopa_raw_store_t &store)
     {
         reg = "a" + std::to_string(stack_map[(koopa_raw_value_t)(store.value)] + 10);
     }
-    std::cout << std::setw(6) << "sw" << reg << ", " << stack_map[(koopa_raw_value_t)(store.dest)] << "(sp)" << std::endl;
+    if (store.dest->kind.tag == KOOPA_RVT_GLOBAL_ALLOC)
+    {
+        std::cout << std::setw(6) << "la" << reg_stack.top() << ", " << store.dest->name + 1 << std::endl;
+        std::cout << std::setw(6) << "sw" << reg << ", " << "0(" << reg_stack.top() << ")" << std::endl;
+    }
+    else
+    {
+        std::cout << std::setw(6) << "sw" << reg << ", " << stack_map[(koopa_raw_value_t)(store.dest)] << "(sp)" << std::endl;
+    }
+    reg_stack.push(reg);
 }
 
 // load指令
@@ -537,6 +548,7 @@ void Visit(const koopa_raw_load_t &load, const koopa_raw_value_t &value)
     reg_stack.push(reg);
 }
 
+// branch指令
 void Visit(const koopa_raw_branch_t &branch)
 {
     if (reg_stack.empty())
@@ -560,13 +572,13 @@ void Visit(const koopa_raw_branch_t &branch)
         }
     }
 
-    std::cout << std::setw(6) << "beqz" << reg << ", " << branch.false_bb->name + 1 << std::endl;
-    std::cout << std::setw(6) << "j" << branch.true_bb->name + 1 << std::endl;
+    std::cout << std::setw(6) << "beqz" << reg << ", " << func_name + '_' << branch.false_bb->name + 1 << std::endl;
+    std::cout << std::setw(6) << "j" << func_name + '_' << branch.true_bb->name + 1 << std::endl;
 }
 
 void Visit(const koopa_raw_jump_t &jump)
 {
-    std::cout << std::setw(6) << "j" << jump.target->name + 1 << std::endl;
+    std::cout << std::setw(6) << "j" << func_name + '_' << jump.target->name + 1 << std::endl;
 }
 
 // 访问 call 指令
@@ -578,6 +590,8 @@ void Visit(const koopa_raw_call_t &call, const koopa_raw_value_t &fa_value)
         koopa_raw_value_t value = (koopa_raw_value_t)(call.args.buffer[i]);
         if (i < 8)
         {
+            save_regs("a" + std::to_string(i));
+            regs.push("a" + std::to_string(i));
             switch (value->kind.tag)
             {
             case KOOPA_RVT_INTEGER:
@@ -590,8 +604,6 @@ void Visit(const koopa_raw_call_t &call, const koopa_raw_value_t &fa_value)
                 }
                 else
                 {
-                    save_regs("a" + std::to_string(i));
-                    regs.push("a" + std::to_string(i));
                     std::cout << std::setw(6) << "mv" << 'a' << i << ", a" << stack_map[value] + 10 << std::endl;
                 }
                 break;
