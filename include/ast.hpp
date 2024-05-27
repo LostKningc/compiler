@@ -5,9 +5,10 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include<iostream>
 
 enum op{ADD,SUB,MUL,DIV,MOD,GT,LT,LE,GE,EQ,NE,AND,OR,NOT,NONE};
-enum Btype{BINT,BFLOAT,BCHAR,BDOUBLE,BVOID};
+enum Btype{BINT,BFLOAT,BCHAR,BDOUBLE,BVOID,BINVALID};
 // 所有 AST 的基类
 class BaseAST {
  public:
@@ -29,8 +30,7 @@ class CompUnitAST : public BaseAST {
 //DefUnits 也是 BaseAST
 class DefUnitsAST : public BaseAST {
  public:
-  std::unique_ptr<BaseAST> def_units;
-  std::unique_ptr<BaseAST> def_unit;
+  std::vector<std::unique_ptr<BaseAST>> unit_list;
   void dump();
 };
 //DefUnit 也是 BaseAST
@@ -44,10 +44,37 @@ class FuncDefAST : public BaseAST {
  public:
   std::unique_ptr<BaseAST> type;
   std::string ident;
+  std::unique_ptr<BaseAST> params;
   std::unique_ptr<BaseAST> block;
   void dump();
 };
 
+class FuncFParamsAST:public BaseAST{
+  public:
+  std::vector<std::unique_ptr<BaseAST>> paramlist;
+  void dump();
+};
+
+class FuncFParamAST:public BaseAST{
+  public:
+  Btype type;
+  std::string ident;
+  void dump();
+};
+
+class FuncCallAST: public BaseAST {
+ public:
+  std::string ident;
+  std::unique_ptr<BaseAST> params;
+  void dump();
+};
+
+//函数调用相关的ast(R做标记，右值)
+class FuncRParamsAST:public BaseAST{
+  public:
+  std::vector<std::unique_ptr<BaseAST>> paramlist;
+  void dump();
+};
 
 // DeclarationType 也是 BaseAST
 class DeclarationTypeAST: public BaseAST {

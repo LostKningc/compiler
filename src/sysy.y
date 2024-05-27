@@ -8,8 +8,6 @@
 }
 
 %{
-
-#include <iostream>
 #include <memory>
 #include <string>
 #include <cstring>
@@ -43,37 +41,43 @@ extern Val_Table val_table;
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
-%type <ast_val> DefUnit DefUnits
-%type <ast_val> FuncDef Block Stmt BlockItems BlockItem
+%type <ast_val> DefUnit DefUnits DefUnitList
+%type <ast_val> FuncDef Block Stmt BlockItems BlockItem FuncFParams FuncFParam FuncFParamList
+%type <ast_val> FuncRParamList FuncRParams
 %type <ast_val> Assignments Assignment
 %type <ast_val> Declarationlist ConstDeclList ConstDefs ConstDef ConstExp VarDeclList VarDefs VarDef InitVal
 %type <ast_val> RelExp EqExp LAndExp LOrExp
 %type <ast_val> Exp AddExp MulExp PrimaryExp UnaryExp OptionExp
 %type <op_val> UnaryOp
 %type <ast_val> Number LVal
-%type <ast_val> FunType
 %type <ast_val> Else
-%type <btype_val> BasicType BType
+%type <btype_val> BasicType 
 
 %%
 
 CompUnit
- :DefUnits {
+ :DefUnitList {
    auto comp_unit = make_unique<CompUnitAST>();
    comp_unit->start = unique_ptr<BaseAST>($1);
    ast = move(comp_unit);
  }
 
+DefUnitList:
+  DefUnits {
+    $$ = $1;
+  };
+
 DefUnits
   :DefUnits DefUnit {
-    auto ast = new DefUnitsAST();
-    ast->def_units = unique_ptr<BaseAST>($1);
-    ast->def_unit = unique_ptr<BaseAST>($2);
+    DefUnitsAST* ast = dynamic_cast<DefUnitsAST*>($1);
+    if(ast==nullptr){
+      std::cerr << "Exception: " << "dynamic_cast failed"<< std::endl;
+    }
+    ast->unit_list.push_back(unique_ptr<BaseAST>($2));
     $$ = ast;
   }|DefUnit {
     auto ast = new DefUnitsAST();
-    ast->def_units = nullptr;
-    ast->def_unit = unique_ptr<BaseAST>($1);
+    ast->unit_list.push_back(unique_ptr<BaseAST>($1));
     $$ = ast;
   } 
   ;
@@ -83,9 +87,9 @@ DefUnit
     auto ast = new DefUnitAST();
     ast->content = unique_ptr<BaseAST>($1);
     $$=ast;
-  }
-  |BlockItem {
-    auto  ast = new DefUnitAST();
+  }|
+  Declarationlist ';'{
+    auto ast = new DefUnitAST();
     ast->content = unique_ptr<BaseAST>($1);
     $$=ast;
   }
@@ -93,24 +97,62 @@ DefUnit
 
 
 FuncDef
-  : FunType IDENT '(' ')' Block {
+  : BasicType IDENT '(' FuncFParamList ')' Block {
     auto ast=new FuncDefAST();
-    ast->type = unique_ptr<BaseAST>($1);
+    auto typeast=new DeclarationTypeAST();
+    typeast->type=$1;
+    ast->type = unique_ptr<BaseAST>(typeast);
     ast->ident = *unique_ptr<string>($2);
-    ast->block = unique_ptr<BaseAST>($5);
+    ast->params=unique_ptr<BaseAST>($4);
+    ast->block = unique_ptr<BaseAST>($6);
     $$=ast;
   }
   ;
 
 //类型
+//函数参数定义部分
+FuncFParamList:
+  FuncFParams {
+    $$ = $1;
+  }|
+  {
+    $$ = nullptr;
+  }
+  ;
 
-FunType
+FuncFParams:
+  FuncFParams ',' FuncFParam {
+    FuncFParamsAST* ast = nullptr;
+    ast = dynamic_cast<FuncFParamsAST*>($1);
+    if(ast==nullptr){
+      std::cerr << "Exception: " << "dynamic_cast failed"<< std::endl;
+    }
+    ast->paramlist.push_back(unique_ptr<BaseAST>($3));
+    $$ = ast;
+  }|
+  FuncFParam {
+    auto ast = new FuncFParamsAST();
+    ast->paramlist.push_back(unique_ptr<BaseAST>($1));
+    $$ = ast;
+  }
+  ;
+  //函数参数定义部分
+FuncFParam:
+    BasicType IDENT {
+      auto ast = new FuncFParamAST();
+      ast->type = $1;
+      ast->ident = *($2);
+      $$ = ast;
+    }
+    ;
+
+/* FunType
   : BasicType {
     auto ast = new DeclarationTypeAST();
     ast->type = $1;
     $$ = ast;
   }
-  ;
+  ; */
 
 
 BasicType: INT {
@@ -124,10 +166,10 @@ BasicType: INT {
   }
   ;
 
-//变量用的
-BType:INT{
+
+/* BType:INT{
   $$ = Btype::BINT;
-};
+}; */
 
 Block
   : '{' BlockItems '}' {
@@ -268,7 +310,7 @@ Declarationlist:
 
 //构造ConstDecllist树
 ConstDeclList:
-  CONST BType ConstDefs {
+  CONST BasicType ConstDefs {
     auto constdecllist = new ConstDeclListAST();
     constdecllist->type = $2;
     constdecllist->constdefs = unique_ptr<BaseAST>($3);
@@ -276,7 +318,7 @@ ConstDeclList:
   }
   ;
 VarDeclList:
-  BType VarDefs {
+  BasicType VarDefs {
     auto vardecllist = new VarDeclListAST();
     vardecllist->type = $1;
     vardecllist->vardefs = unique_ptr<BaseAST>($2);
@@ -542,6 +584,40 @@ UnaryExp:
     ast->op1 = $1;
     ast->exp1 = unique_ptr<BaseAST>($2);
     //ast->calc_f=ast->exp1->calc_f;
+    $$ = ast;
+  }|
+  IDENT '(' FuncRParamList')'{
+    auto ast = new FuncCallAST();
+    ast->ident = *($1);
+    ast->params = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  ;
+
+//函数调用
+FuncRParamList:
+  FuncRParams{
+    $$ = $1;
+  }|
+  {
+    $$ = nullptr;
+  }
+  ;
+
+//函数调用
+FuncRParams:
+  FuncRParams ',' Exp{
+    FuncRParamsAST* ast = nullptr;
+    ast = dynamic_cast<FuncRParamsAST*>($1);
+    if(ast==nullptr){
+      std::cerr << "Exception: " << "dynamic_cast failed"<< std::endl;
+    }
+    ast->paramlist.push_back(unique_ptr<BaseAST>($3));
+    $$ = ast;
+  }|
+  Exp{
+    auto ast = new FuncRParamsAST();
+    ast->paramlist.push_back(unique_ptr<BaseAST>($1));
     $$ = ast;
   }
   ;

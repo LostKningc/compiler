@@ -9,6 +9,7 @@
 #include "ast.hpp"
 #include "IRtoAsm.hpp"
 #include "basicblock.hpp"
+#include "funcmanager.hpp"
 
 using namespace std;
 
@@ -23,8 +24,11 @@ extern FILE *yyin;
 extern int yyparse(std::unique_ptr<BaseAST> &ast);
 
 int now=0;
+std::vector<std::string> params_tmp;
 
 BasicBlockManager bbm;//全局的一个基本块计数器
+
+FuncManager funcm;//全局的函数管理器
 
 
 void parseGrammar(string fname);
@@ -80,6 +84,9 @@ void parseGrammar(string fname){
     unique_ptr<BaseAST> ast;
     auto ret = yyparse(ast);
     assert(!ret);
+    //sysy库的函数声明
+    funcm.printSysyDeclFunc();
+    //体
     ast->dump();
    // 恢复标准输出流的缓冲区指针
     std::cout.rdbuf(coutBuf);

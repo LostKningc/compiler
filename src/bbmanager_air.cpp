@@ -62,3 +62,11 @@ void BasicBlockManager::CreateBasicBlock(string lable){
     //进{}和进basicblock不一样
     enterBasicBlock();
 }
+
+void BasicBlockManager::AndBranch(){
+    andCounter++;
+}
+
+void BasicBlockManager::OrBranch(){
+    orCounter++;
+}

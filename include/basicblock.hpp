@@ -13,6 +13,8 @@ class BasicBlockManager{
     int nowbl = 0; // 当前基本块索引
     int bl_dep = 0; // 基本块深度计数器
     int ifCounter=-1;//用来给if块起名的
+    int andCounter=-1;//用来给and块起名的
+    int orCounter=-1;//用来给or块起名的
     int whileCounter=-1;//用来给while块起名的
     std::vector<int> while_stack;
 
@@ -34,6 +36,8 @@ class BasicBlockManager{
     void BlockBranch(string judge,string label1,string label2);
     void BlockBranch(int judge,string label1,string label2);
     void CreateBasicBlock(string label);
+    void AndBranch();
+    void OrBranch();
 };
 
 #endif  // BLOCK_HPP
