@@ -1,5 +1,12 @@
+global @var = alloc i32, zeroinit
+global @var1 = alloc i32, 12
+
 fun @main(): i32 {
 %entry:
-  ret 1
-  ret 1
+  %0 = load @var
+  %1 = add %0, 1
+  %2 = load @var1
+  %3 = add %1, %2
+  ret %2
 }
+
