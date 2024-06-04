@@ -33,12 +33,14 @@ class DefUnitsAST : public BaseAST {
   std::vector<std::unique_ptr<BaseAST>> unit_list;
   void dump();
 };
+
 //DefUnit 也是 BaseAST
 class DefUnitAST : public BaseAST {
  public:
   std::unique_ptr<BaseAST> content;
   void dump();
 };
+
 // FuncDef 也是 BaseAST
 class FuncDefAST : public BaseAST {
  public:
@@ -59,7 +61,17 @@ class FuncFParamAST:public BaseAST{
   public:
   Btype type;
   std::string ident;
+  std::unique_ptr<BaseAST> arraydef;
   void dump();
+  void array_dump();
+  void variable_dump();
+};
+
+class FuncArrayAST:public BaseAST{
+  public:
+  std::string ident;
+  std::vector<std::unique_ptr<BaseAST>> dimon_list;
+  void dump(){};
 };
 
 class FuncCallAST: public BaseAST {
@@ -124,7 +136,10 @@ class AssignAST : public BaseAST {
  public:
   std::string ident;
   std::unique_ptr<BaseAST> exp;
+  std::unique_ptr<BaseAST> arraydef;
   void dump();
+  void array_dump();
+  void variable_dump();
 };
 
 //if/else的AST
@@ -158,7 +173,6 @@ class ConstDeclListAST: public BaseAST {
  public:
   std::unique_ptr<BaseAST> constdefs;
   Btype type;
-  //TODO
   void dump();
 };
 
@@ -178,6 +192,22 @@ class ConstDefsAST: public BaseAST {
   void dump();
 };
 
+class ConstInitValsAST : public BaseAST{
+  public:
+  std::unique_ptr<BaseAST> constexp;
+  std::vector<std::unique_ptr<BaseAST>> array_val_list;
+  void dump() override;
+  void up_calc() override;
+  int calc() override;
+};
+
+class InitValsAST : public BaseAST{
+  public:
+  std::unique_ptr<BaseAST> exp;
+  std::vector<std::unique_ptr<BaseAST>> array_val_list;
+  void dump(){};
+};
+
 class VarDefsAST: public BaseAST {
  public:
   Btype type;
@@ -189,21 +219,39 @@ class VarDefsAST: public BaseAST {
 class ConstDefAST: public BaseAST {
  public:
   std::string ident;
+  std::unique_ptr<BaseAST> arraydef;
   Btype type;
   std::unique_ptr<BaseAST> initval;
   //TODO
   void dump() override;
   int calc() override;
-};
+}; 
 
 class VarDefAST: public BaseAST {
  public:
   std::string ident;
   Btype type;
+  std::unique_ptr<BaseAST> arraydef;
   std::unique_ptr<BaseAST> initval;
   //TODO
   void dump() override;
+  void array_dump();
+  void variable_dump();
+};
 
+class ArrayDefsAST: public BaseAST {
+ public:
+  std::string ident; 
+  std::vector<std::unique_ptr<BaseAST>> dimon_list;
+  void dump(){};
+};
+
+class ExpAST:public BaseAST{
+  public:
+    std::unique_ptr<BaseAST> exp;
+    void dump() override;
+    void up_calc() override;
+    int calc() override;
 };
 
 class ConstExpAST: public BaseAST {
@@ -212,7 +260,7 @@ class ConstExpAST: public BaseAST {
   void up_calc() override;
   void dump() override;
   int calc() override;
-};
+}; 
 
 class ReturnAST: public BaseAST {
  public:
@@ -260,9 +308,19 @@ class NumberAST: public BaseAST {
 class LValAST: public BaseAST {
  public:
   std::string ident;
+  std::unique_ptr<BaseAST> arraydef;
   void dump() override;
   int calc() override;
+  void Array_dump();
+  void Variable_dump();
   void up_calc() override;
+};
+
+class LArrayAST: public BaseAST {
+ public:
+  std::string ident;
+  std::vector<std::unique_ptr<BaseAST>> dimon_list;
+  void dump() {};
 };
 
 class OptionExpAST: public BaseAST {
@@ -272,5 +330,7 @@ class OptionExpAST: public BaseAST {
   void up_calc() override;
   int calc() override;
 };
+
+
 
 #endif  // AST_HPP

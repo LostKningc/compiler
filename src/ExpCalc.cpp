@@ -14,6 +14,10 @@ int ConstExpAST::calc(){
     return exp->calc();
 }
 
+int ExpAST::calc(){
+    return exp->calc();
+}
+
 int BinaryExpAST::calc(){
     int tmp1=exp1->calc();
     int tmp2=exp2->calc();
@@ -66,6 +70,13 @@ int UnaryExpAST::calc(){
 
 //只有常量时才能调用
 int LValAST::calc(){
+    if(calc_f==0)
+    {
+        std::cout<<val_table.Get_Name(this->ident)<<std::endl;
+        std::cout<<val_table.get(ident).second<<std::endl;
+        std::cout<<"error: can't be directly calculated"<<std::endl;
+        throw std::runtime_error("error: can't be directly calculated");
+    }
     return val_table.get(ident).first;
 }
 
@@ -81,6 +92,12 @@ void ConstExpAST::up_calc(){
     exp->up_calc();
     calc_f=exp->calc_f;
 }
+
+void ExpAST::up_calc(){
+    exp->up_calc();
+    calc_f=exp->calc_f;
+}
+
 void BinaryExpAST::up_calc(){
     exp1->up_calc();
     exp2->up_calc();
@@ -94,7 +111,10 @@ void NumberAST::up_calc(){
     calc_f=true;
 }
 void LValAST::up_calc(){
-    calc_f=val_table.get(ident).second;
+    if(ident!="")
+        calc_f=val_table.get(ident).second;
+    else
+        calc_f=false;
 }
 
 void OptionExpAST::up_calc(){
@@ -107,3 +127,20 @@ void OptionExpAST::up_calc(){
     }
 }
 
+void ConstInitValsAST::up_calc(){
+    if(constexp){
+        constexp->up_calc();
+        calc_f=constexp->calc_f;
+    }
+    else{
+        calc_f=false;
+    }
+}
+
+int ConstInitValsAST::calc(){
+    if(calc_f)
+        return constexp->calc();
+    else{
+        throw std::runtime_error("error: can't be directly calculated");
+    }
+}

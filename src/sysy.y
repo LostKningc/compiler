@@ -43,9 +43,11 @@ extern Val_Table val_table;
 
 %type <ast_val> DefUnit DefUnits DefUnitList
 %type <ast_val> FuncDef Block Stmt BlockItems BlockItem FuncFParams FuncFParam FuncFParamList
-%type <ast_val> FuncRParamList FuncRParams
+%type <ast_val> FuncRParamList FuncRParams FuncArrays FuncArray
 %type <ast_val> Assignments Assignment
 %type <ast_val> Declarationlist ConstDeclList ConstDefs ConstDef ConstExp VarDeclList VarDefs VarDef InitVal
+%type <ast_val> ArrayDefs ArrayDef ConstInitVal ConstVals InitVals
+%type <ast_val> LArray LArrays
 %type <ast_val> RelExp EqExp LAndExp LOrExp
 %type <ast_val> Exp AddExp MulExp PrimaryExp UnaryExp OptionExp
 %type <op_val> UnaryOp
@@ -142,9 +144,39 @@ FuncFParam:
       auto ast = new FuncFParamAST();
       ast->type = $1;
       ast->ident = *($2);
+      ast->arraydef = nullptr;
+      $$ = ast;
+    }
+    |BasicType FuncArrays{
+      auto ast = new FuncFParamAST();
+      ast->type = $1;
+      ast->ident = "";
+      ast->arraydef = unique_ptr<BaseAST>($2);
       $$ = ast;
     }
     ;
+
+FuncArrays:
+  FuncArrays '[' ConstExp ']'{
+    FuncArrayAST* ast = nullptr;
+    ast = dynamic_cast<FuncArrayAST*>($1);
+    if(ast==nullptr){
+      throw std::runtime_error("error: FuncArrayAST dynamic_cast failed");
+    }
+    ast->dimon_list.push_back(unique_ptr<BaseAST>($3));
+    $$ = ast;
+  }|
+  FuncArray {
+    $$ = $1;
+  }
+  ;
+
+FuncArray:
+  IDENT '[' ']'{
+    auto ast = new FuncArrayAST();
+    ast->ident = *($1);
+    $$ = ast;
+  }
 
 /* FunType
   : BasicType {
@@ -219,7 +251,7 @@ BlockItem:
   }
   ;
 
-  Stmt
+Stmt
   : 
   Assignments ';' {
     auto ast =new BlockItemAST();
@@ -285,7 +317,7 @@ Else:
   }
 
 
-  OptionExp:
+OptionExp:
     Exp{
       auto ast=new OptionExpAST();
       ast->exp=unique_ptr<BaseAST>($1);
@@ -362,27 +394,116 @@ VarDefs:
     $$ = defsast;
   }
   ;
-//构建树
+//TODO:构建树
 ConstDef:
-  IDENT '=' InitVal {
+  IDENT '=' ConstInitVal {
     auto ast = new ConstDefAST();
     ast->ident = *($1);
+    ast->arraydef = nullptr;
+    ast->initval = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  |
+  ArrayDefs '='  ConstInitVal{
+    auto ast = new ConstDefAST();
+    ast->ident = "";
+    ast->arraydef = unique_ptr<BaseAST>($1);
     ast->initval = unique_ptr<BaseAST>($3);
     $$ = ast;
   }
   ;
 
+ConstInitVal:
+  ConstExp {
+    auto initval = new ConstExpAST();
+    initval->exp = unique_ptr<BaseAST>($1);
+    $$ = initval;
+  }
+  |'{' ConstVals '}'{
+    $$=$2;
+  }|
+  '{' '}'{
+    auto initvals = new ConstInitValsAST();
+    initvals->constexp = nullptr;
+    $$ = initvals;
+  }
+  ;
+
+ConstVals:
+  ConstInitVal {
+    auto ast = new ConstInitValsAST();
+    ast->array_val_list.push_back(unique_ptr<BaseAST>($1));
+    $$ = ast;
+  }|
+  ConstVals ',' ConstInitVal {
+    ConstInitValsAST* valsast = nullptr;
+    valsast = dynamic_cast<ConstInitValsAST*>($1);
+    if(valsast==nullptr){
+        throw std::runtime_error("error: ConstInitValsAST dynamic_cast failed");
+      }
+    valsast->array_val_list.push_back(unique_ptr<BaseAST>($3));
+    $$ = valsast;
+  }
+  ;
+
+
+
+//重构这棵树
 VarDef:
   IDENT '=' InitVal {
     auto ast = new VarDefAST();
     ast->ident = *($1);
+    ast->arraydef = nullptr;
     ast->initval = unique_ptr<BaseAST>($3);
     $$ = ast;
   }
   |IDENT {
     auto ast = new VarDefAST();
     ast->ident = *($1);
+    ast->arraydef = nullptr;
     ast->initval = nullptr;
+    $$ = ast;
+  }
+  |ArrayDefs{
+    auto ast = new VarDefAST();
+    ast->ident = "";
+    ast->arraydef = unique_ptr<BaseAST>($1);
+    auto initvals = new InitValsAST();
+    initvals->exp = nullptr;
+    ast->initval = unique_ptr<BaseAST>(initvals);
+    $$ = ast;
+  }
+  |
+  ArrayDefs '='  InitVal {
+    auto ast = new VarDefAST();
+    ast->ident = "";
+    ast->arraydef = unique_ptr<BaseAST>($1);
+    ast->initval = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  ;
+
+ArrayDefs:
+  ArrayDefs '[' ConstExp ']'{
+    ArrayDefsAST* ast = nullptr;
+    ast = dynamic_cast<ArrayDefsAST*>($1);
+    if(ast==nullptr){
+      throw std::runtime_error("error: ArrayDefsAST cast failed");
+    }
+    ast->dimon_list.push_back(unique_ptr<BaseAST>($3)); 
+    $$ = ast;
+  }
+  |
+  ArrayDef {
+    $$ = $1;
+  }
+  ;
+
+ArrayDef:
+  IDENT '[' ConstExp ']' {
+    auto ast = new ArrayDefsAST();
+    ast->ident = *($1);
+    ast->dimon_list.push_back(unique_ptr<BaseAST>($3));
     $$ = ast;
   }
   ;
@@ -397,24 +518,64 @@ Assignment:
   IDENT '=' Exp {
     auto ast=new AssignAST();
     ast->ident=*($1);
+    ast->arraydef=nullptr;
     ast->exp=unique_ptr<BaseAST>($3);
     //set_sym_val(sym_head,sym_tail,*($1),$3);
+    $$=ast;
+  }|
+  LArrays '=' Exp{
+    auto ast=new AssignAST();
+    ast->ident="";
+    ast->arraydef=unique_ptr<BaseAST>($1);
+    ast->exp=unique_ptr<BaseAST>($3);
     $$=ast;
   }
   ;
 
 //获得变量的值
 InitVal:
-  ConstExp {
-    auto initval = new ConstExpAST();
+  Exp {
+    auto initval = new ExpAST();
     initval->exp = unique_ptr<BaseAST>($1);
     $$ = initval;
   }
+  |
+  '{' InitVals '}'{
+    InitValsAST* ast=dynamic_cast<InitValsAST*>($2);
+    if(ast==nullptr){
+      throw std::runtime_error("error: ArrayDefsAST cast failed");
+    }
+    $$ = ast;
+  }
+  |
+  '{' '}'{
+    auto initvals = new InitValsAST();
+    initvals->exp = nullptr;
+    $$ = initvals;
+  }
   ;
+
+InitVals:
+  InitVal {
+    auto ast = new InitValsAST();
+    ast->array_val_list.push_back(unique_ptr<BaseAST>($1));
+    $$ = ast;
+  }|
+  InitVals ',' InitVal {
+    InitValsAST* valsast = nullptr;
+    valsast = dynamic_cast<InitValsAST*>($1);
+    if(valsast==nullptr){
+        std::cerr << "Exception: " << "dynamic_cast failed"<< std::endl;
+      }
+    valsast->array_val_list.push_back(unique_ptr<BaseAST>($3));
+    $$ = valsast;
+  }
 
 ConstExp:
   Exp{
-    $$ =$1;
+    auto ast=new ConstExpAST();
+    ast->exp=unique_ptr<BaseAST>($1);
+    $$=ast;
   }
   ;
 
@@ -422,11 +583,13 @@ ConstExp:
 //构造Exp树
 Exp
   : LOrExp {
-    $$ = $1;
+    auto ast=new ExpAST();
+    ast->exp=unique_ptr<BaseAST>($1);
+    $$=ast;
   }
   ;
 
-//构造LOrExp树
+ 
 LOrExp:
   LOrExp '|''|' LAndExp {
     auto lorexp = new BinaryExpAST();
@@ -585,12 +748,6 @@ UnaryExp:
     ast->exp1 = unique_ptr<BaseAST>($2);
     //ast->calc_f=ast->exp1->calc_f;
     $$ = ast;
-  }|
-  IDENT '(' FuncRParamList')'{
-    auto ast = new FuncCallAST();
-    ast->ident = *($1);
-    ast->params = unique_ptr<BaseAST>($3);
-    $$ = ast;
   }
   ;
 
@@ -643,6 +800,12 @@ PrimaryExp:
   }|
   LVal {
     $$ = $1;
+  }|
+  IDENT '(' FuncRParamList')'{
+    auto ast = new FuncCallAST();
+    ast->ident = *($1);
+    ast->params = unique_ptr<BaseAST>($3);
+    $$ = ast;
   }
   ;
 
@@ -661,8 +824,38 @@ LVal:
     auto ast = new LValAST();
     ast->ident = *($1);
     $$ = ast;
+  }|
+  LArrays{
+    auto ast=new LValAST();
+    ast->ident="";
+    ast->arraydef = unique_ptr<BaseAST>($1);
+    $$=ast;
   }
-  ; 
+  ;
+
+LArrays:
+  LArrays '[' Exp ']'{
+    LArrayAST* ast = nullptr;
+    ast = dynamic_cast<LArrayAST*>($1);
+    if(ast==nullptr){
+      std::cerr << "Exception: " << "dynamic_cast failed"<< std::endl;
+    }
+    ast->dimon_list.push_back(unique_ptr<BaseAST>($3));
+    $$ = ast;
+  }|
+  LArray{
+    $$=$1;
+  }
+  ;
+
+LArray:
+  IDENT '[' Exp ']'{
+    auto ast = new LArrayAST();
+    ast->ident = *($1);
+    ast->dimon_list.push_back(unique_ptr<BaseAST>($3));
+    $$ = ast;
+  }
+  ;
 %%
 
 void yyerror(std::unique_ptr<BaseAST> &ast,std::string s) {

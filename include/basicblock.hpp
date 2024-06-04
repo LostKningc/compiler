@@ -8,8 +8,9 @@
 using namespace std;
 //这个只涉及会创建基本块的部分，比如说函数调用，if else，for while等
 class BasicBlockManager{
-    public:
+    
     std::vector<bool> be_end_bl; // 跟踪每个基本块是否已经结束
+    public:
     int nowbl = 0; // 当前基本块索引
     int bl_dep = 0; // 基本块深度计数器
     int ifCounter=-1;//用来给if块起名的

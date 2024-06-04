@@ -3,19 +3,22 @@
 
 
 void BasicBlockManager::enterBasicBlock(){
-    bl_dep++;
     nowbl = bl_dep;
     if (be_end_bl.size() <= nowbl) {
+        // cout << "Error: be_end_bl size is not enough" << endl;
         be_end_bl.push_back(false); // 确保状态数组大小足够并初始化为 false
+        // cout<<"enterBasicBlock:"<<nowbl<<':'<< be_end_bl[nowbl] <<endl;
     }
+    bl_dep++;
 }
 
 void BasicBlockManager::generateRetOrJump() {
     // 生成 ret 或 jump 指令
-        be_end_bl[nowbl] = true; // 标记当前基本块已经结束
+    be_end_bl[nowbl] = true; // 标记当前基本块已经结束
 }
 
 void BasicBlockManager::BlockJump(string label) {
+            // cout<<nowbl<<':'<< be_end_bl[nowbl] <<endl;
     if(!CheckEndBl()){
         cout<<"jump "<<"%"<<label<<endl;
         generateRetOrJump();
@@ -61,6 +64,7 @@ void BasicBlockManager::CreateBasicBlock(string lable){
     std::cout<<"%"<<lable<<":"<<std::endl;
     //进{}和进basicblock不一样
     enterBasicBlock();
+
 }
 
 void BasicBlockManager::AndBranch(){

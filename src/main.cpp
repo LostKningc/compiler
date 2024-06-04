@@ -26,10 +26,11 @@ extern int yyparse(std::unique_ptr<BaseAST> &ast);
 int now=0;
 std::vector<std::string> params_tmp;
 
-BasicBlockManager bbm;//全局的一个基本块计数器
+BasicBlockManager bbm;//基本块管理工具
 
-FuncManager funcm;//全局的函数管理器
+FuncManager funcm;//函数管理工具
 
+ ArrayManager arraym;//数组管理工具
 
 void parseGrammar(string fname);
 
