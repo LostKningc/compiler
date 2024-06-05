@@ -1,5 +1,58 @@
-fun @main(): i32 {
+decl @getint():i32
+decl @getch():i32
+decl @getarray(*i32):i32
+decl @putint(i32)
+decl @putch(i32)
+decl @putarray(i32,*i32)
+decl @starttime()
+decl @stoptime()
+
+global @__filed0__a = alloc i32 , 10
+
+fun @inc() : i32 { 
 %entry:
-  ret 1
-  ret 1
-}
+%0= load @__filed0__a
+%1= add %0, 1
+store %1, @__filed0__a
+%2= load @__filed0__a
+ret %2
+ }
+fun @print_a(){ 
+%entry:
+%3= load @__filed0__a
+call @putint(%3)
+%4= add 0, 10
+call @putch(%4)
+ret
+ }
+fun @main() : i32 { 
+%entry:
+@i = alloc i32 
+store 0, @i
+
+jump %while_entry0
+%while_entry0:
+%5= load @i
+%6= lt %5, 10
+br %6, %while_body0, %while_end0
+
+%while_body0:
+%7= call @inc()
+@a = alloc i32 
+store 1, @a
+
+%8= load @a
+%9= add %8, 2
+store %9, @a
+%10= load @a
+call @putint(%10)
+%11= add 0, 10
+call @putch(%11)
+call @print_a()
+%12= load @i
+%13= add %12, 1
+store %13, @i
+jump %while_entry0
+%while_end0:
+ret 0
+ }

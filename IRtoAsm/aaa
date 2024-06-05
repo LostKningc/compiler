@@ -1,0 +1,21 @@
+define void @f(i32 %x) {
+$entry:
+  ret void
+}
+
+define i32 @half(i32 %x) {
+$entry:
+  %$x = alloca i32
+  store i32 %x, i32* %$x
+  %$0 = load i32, i32* %$x
+  %$1 = sdiv i32 %$0, 2
+  call void @f(i32 %x)
+  ret i32 %$1
+}
+
+define i32 @main() {
+$entry:
+  call void @f(i32 10)
+  %$2 = call i32 @half(i32 10)
+  ret i32 %$2
+}
