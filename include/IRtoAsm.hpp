@@ -27,5 +27,5 @@ void save_regs(std::string reg);
 void restore_regs(std::string reg);
 int cal_array_length(const koopa_raw_type_kind &value);
 void analysis_aggregate(const koopa_raw_aggregate_t &aggregate, std::list<int32_t> &init_list );
-
+void store_array(const koopa_raw_value_t &value, int offset);
 int IRanalysis(std::string inputfile, std::string outputfile);
