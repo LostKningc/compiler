@@ -94,7 +94,7 @@ void Val_Table::params2block(){
 }
 
 void Val_Table::valuePlus1(std::string name){
-	t_stack[1].val_map[name].first++;
+	t_stack[1].val_map[name].value++;
 }
 
 int Val_Table::get_field_idx(){

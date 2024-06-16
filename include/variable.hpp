@@ -9,21 +9,22 @@
 
 class Val_Info{
 public:
-	int first;
-	bool second;
-	bool array_const=false;
-	int array_size=0;
-	Val_Info(int f,bool s):first(f),second(s){array_size=0;};
+	int value;//变量的值（对于常量，可直接取用）（对于变量，这个值用来区别参数与变量）
+	bool const_var;//是否为常量
+	//下两条属性用于数组
+	bool array_const=false;//是否为数组常量
+	int array_size=0;//数组大小
+	Val_Info(int f,bool s):value(f),const_var(s){array_size=0;};
 	Val_Info()=default;
-	Val_Info(int f,bool s,bool a):first(f),second(s),array_const(a){array_size=0;};
-	Val_Info(int f,bool s,bool a,int az):first(f),second(s),array_const(a),array_size(az){};
+	Val_Info(int f,bool s,bool a):value(f),const_var(s),array_const(a){array_size=0;};
+	Val_Info(int f,bool s,bool a,int az):value(f),const_var(s),array_const(a),array_size(az){};
 };
 
 
 struct Val_Map{
-	int field_idx;
-	std::unordered_map<std::string,Val_Info> val_map;
-	std::vector<std::string> param_stack;
+	int field_idx;//当前符号表所处作用域序号
+	std::unordered_map<std::string,Val_Info> val_map;//管理符号表用的hashmap
+	std::vector<std::string> param_stack;//参数栈（函数调用的时候涉及）
 	Val_Map()=default;
 	Val_Map(int idx):field_idx(idx){}
 };
@@ -43,18 +44,18 @@ class Val_Table{
 		std::vector<Val_Map> t_stack;
 		std::vector<Param_Info> params_tmp;
 		Val_Table();
-		void EnterBlock();
-		void ExitBlock();
-		const Val_Info& get(std::string name);
+		void EnterBlock();//会压入一张符号表，计数器加1
+		void ExitBlock();//会弹出符号表
+		const Val_Info& get(std::string name);//获取变量信息
 		//将参数添加到作用域（定义函数阶段）
 		void params2block();
 		//添加参数(定义函数阶段)
-		void add_Param(std::string name);
-		void add_Param(std::string name,int dimon);
-		void Record(std::string name,std::pair<int,bool> val);
-		void Record(std::string name,int value,bool const_flag,bool array_const);
-		void Record(std::string name,int value,bool const_flag,bool array_const,int array_size);
-		std::string Get_Name(std::string prim_name);
+		void add_Param(std::string name);//将参数添加到参数栈
+		void add_Param(std::string name,int dimon);//将参数添加到参数栈
+		void Record(std::string name,std::pair<int,bool> val);//将符号及其信息加入当前层的hashmap
+		void Record(std::string name,int value,bool const_flag,bool array_const);//将符号及其信息加入当前层的hashmap
+		void Record(std::string name,int value,bool const_flag,bool array_const,int array_size);//将符号及其信息加入当前层的hashmap
+		std::string Get_Name(std::string prim_name);//加上前缀，定位到正确的变量
 		void valuePlus1(std::string name);
 		int get_field_idx();
 };

@@ -378,13 +378,13 @@ void::AssignAST::dump() {
 }
 
 void AssignAST::variable_dump() {
-    if(val_table.get(ident).second){
+    if(val_table.get(ident).const_var){
         cerr<<"this is a const,can't be assigned"<<std::endl;
     }else{
         std::string val_name;
-        if(val_table.get(ident).first==0)
+        if(val_table.get(ident).value==0)
             val_name="@"+val_table.Get_Name(ident);
-        else if(val_table.get(ident).first==1){
+        else if(val_table.get(ident).value==1){
             //TODO:这里后面要改,目前只有int，先这样了
             std::cout<<"%"<<ident<<"= "<<"alloc "<<"i32"<<std::endl;
             std::cout<<"store "<<"@"<<val_table.Get_Name(ident)<<", "<<"%"<<ident<<std::endl;
@@ -414,11 +414,11 @@ void AssignAST::array_dump(){
     }
     else{
         std::string val_name;
-        if(val_table.get(arraym.get_name()).first==0){
+        if(val_table.get(arraym.get_name()).value==0){
             arraym.LArrayLoad();
             val_name=arraym.get_current_ptr();
         }
-        else if(val_table.get(arraym.get_name()).first==1){
+        else if(val_table.get(arraym.get_name()).value==1){
             
             arraym.ParamArrayLoad();
             val_name=arraym.get_current_ptr();
@@ -759,9 +759,9 @@ void LValAST::dump() {
 
 void LValAST::Variable_dump() {
     if(calc_f)
-        std::cout<<"%"<<now<<"= "<<"add 0, "<<val_table.get(ident).first<<std::endl;
+        std::cout<<"%"<<now<<"= "<<"add 0, "<<val_table.get(ident).value<<std::endl;
     else{
-        int tmp=val_table.get(ident).first;
+        int tmp=val_table.get(ident).value;
         if(tmp==0){
             if(val_table.get(ident).array_size==0)
                 std::cout<<"%"<<now<<"= "<<"load "<<"@"<<val_table.Get_Name(ident)<<std::endl;
@@ -785,7 +785,7 @@ void LValAST::Variable_dump() {
 void LValAST::Array_dump() {
     arraym.InitializeManager(Btype::BINT);
     arraym.addLArray(arraydef);
-    if(val_table.get(arraym.get_name()).first==0)
+    if(val_table.get(arraym.get_name()).value==0)
         arraym.LArrayLoad();
     else
         arraym.ParamArrayLoad();

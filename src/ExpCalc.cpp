@@ -7,7 +7,7 @@ extern Val_Table val_table;
 
 int ConstDefAST::calc(){
     val_table.Record(ident,std::make_pair(initval->calc(),true));
-    return val_table.get(ident).first;
+    return val_table.get(ident).value;
 }
 
 int ConstExpAST::calc(){
@@ -73,11 +73,11 @@ int LValAST::calc(){
     if(calc_f==0)
     {
         std::cout<<val_table.Get_Name(this->ident)<<std::endl;
-        std::cout<<val_table.get(ident).second<<std::endl;
+        std::cout<<val_table.get(ident).const_var<<std::endl;
         std::cout<<"error: can't be directly calculated"<<std::endl;
         throw std::runtime_error("error: can't be directly calculated");
     }
-    return val_table.get(ident).first;
+    return val_table.get(ident).value;
 }
 
 int OptionExpAST::calc(){
@@ -112,7 +112,7 @@ void NumberAST::up_calc(){
 }
 void LValAST::up_calc(){
     if(ident!="")
-        calc_f=val_table.get(ident).second;
+        calc_f=val_table.get(ident).const_var;
     else
         calc_f=false;
 }
