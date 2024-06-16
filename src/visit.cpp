@@ -133,7 +133,7 @@ void Visit(const koopa_raw_function_t &func)
         size_of_stack_frame += 4;
     }
     max_arg_count = 4 * MAX(max_arg_count - 8, 0) - 4;
-    // 写入栈帧
+    // 将栈帧分配给临时变量
     for (size_t i = 0; i < func->bbs.len; i++)
     {
         koopa_raw_basic_block_t bb = (koopa_raw_basic_block_t)(func->bbs.buffer[i]);
@@ -143,6 +143,19 @@ void Visit(const koopa_raw_function_t &func)
             if (ptr->ty->tag != KOOPA_RTT_UNIT)
             {
                 stack_map.insert({(koopa_raw_value_t)ptr, max_arg_count += 4});
+                if (ptr->kind.tag == KOOPA_RVT_ALLOC)
+                {
+                    if (ptr->ty->data.pointer.base->tag == KOOPA_RTT_ARRAY)
+                    {
+                        max_arg_count += 4 * cal_array_length(*ptr->ty->data.pointer.base);
+                        size_of_stack_frame += 4 * cal_array_length(*ptr->ty->data.pointer.base);
+                    }
+                    else
+                    {
+                        size_of_stack_frame += 4;
+                        max_arg_count += 4;
+                    }
+                }
             }
         }
     }
@@ -176,7 +189,16 @@ void Visit(const koopa_raw_function_t &func)
     // 保存ra
     if (call_flag)
     {
-        std::cout << std::setw(6) << "sw ra, " << -size_of_stack_frame - 4 << "(sp)" << std::endl;
+        if (-size_of_stack_frame - 4 > 2047)
+        {
+            std::cout << std::setw(6) << "li t1, " << -size_of_stack_frame - 4 << std::endl;
+            std::cout << std::setw(6) << "add t1, sp, t1" << std::endl;
+            std::cout << std::setw(6) << "sw ra, 0(t1)" << std::endl;
+        }
+        else
+        {
+            std::cout << std::setw(6) << "sw ra, " << -size_of_stack_frame - 4 << "(sp)" << std::endl;
+        }
     }
 
     Visit(func->bbs);
@@ -215,7 +237,24 @@ void Visit(const koopa_raw_value_t &value)
         break;
     case KOOPA_RVT_ALLOC:
         // 访问 alloc 指令
-        break;
+        {
+            std::string reg = reg_stack.top();
+            reg_stack.pop();
+            std::cout << std::setw(6) << "li" << reg << ", " << stack_map[value] + 4 << std::endl;
+            std::cout << std::setw(6) << "add" << reg << ", " << reg << ", " << "sp" << std::endl;
+            if (stack_map[value] > 2047)
+            {
+                std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[value] << std::endl;
+                std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+                std::cout << std::setw(6) << "sw" << reg << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+            }
+            else
+            {
+                std::cout << std::setw(6) << "sw" << reg << ", " << stack_map[value] << "(sp)" << std::endl;
+            }
+            reg_stack.push(reg);
+            break;
+        }
     case KOOPA_RVT_LOAD:
         // 访问 load 指令
         Visit(kind.data.load, value);
@@ -240,6 +279,14 @@ void Visit(const koopa_raw_value_t &value)
         // 访问 global_alloc 指令
         Visit(kind.data.global_alloc, value);
         break;
+    case KOOPA_RVT_GET_ELEM_PTR:
+        // 访问 get_elem_ptr 指令
+        Visit(kind.data.get_elem_ptr, value);
+        break;
+    case KOOPA_RVT_GET_PTR:
+        // 访问 get_ptr 指令
+        Visit(kind.data.get_ptr, value);
+        break;
     default:
         // 其他类型暂时遇不到
         std::cerr << kind.tag << std::endl;
@@ -262,13 +309,23 @@ void Visit(const koopa_raw_return_t &ret)
             std::cout << std::setw(6) << "li" << "a0, " << ret.value->kind.data.integer.value << std::endl;
             break;
         default:
-            if (stack_map[ret.value] >= 0)
+            if (stack_map[ret.value] < 2048)
             {
-                std::cout << std::setw(6) << "lw" << "a0, " << stack_map[ret.value] << "(sp)" << std::endl;
+
+                if (stack_map[ret.value] >= 0)
+                {
+                    std::cout << std::setw(6) << "lw" << "a0, " << stack_map[ret.value] << "(sp)" << std::endl;
+                }
+                else if (stack_map[ret.value] != -10)
+                {
+                    std::cout << std::setw(6) << "mv" << "a0, a" << stack_map[ret.value] + 10 << std::endl;
+                }
             }
-            else if (stack_map[ret.value] != -10)
+            else
             {
-                std::cout << std::setw(6) << "mv" << "a0, a" << stack_map[ret.value] + 10 << std::endl;
+                std::cout << std::setw(6) << "li" << reg_stack.top() + ", " << stack_map[ret.value] << std::endl;
+                std::cout << std::setw(6) << "add" << "a0," + reg_stack.top() + ", sp" << std::endl;
+                std::cout << std::setw(6) << "lw" << "a0, " << 0 << "(a0)" << std::endl;
             }
             break;
         };
@@ -277,7 +334,16 @@ void Visit(const koopa_raw_return_t &ret)
     // 恢复ra
     if (call_flag)
     {
-        std::cout << std::setw(6) << "lw ra, " << -size_of_stack_frame - 4 << "(sp)" << std::endl;
+        if (-size_of_stack_frame - 4 > 2047)
+        {
+            std::cout << std::setw(6) << "li t1, " << -size_of_stack_frame - 4 << std::endl;
+            std::cout << std::setw(6) << "add t1, sp, t1" << std::endl;
+            std::cout << std::setw(6) << "lw ra, 0(t1)" << std::endl;
+        }
+        else
+        {
+            std::cout << std::setw(6) << "lw ra, " << -size_of_stack_frame - 4 << "(sp)" << std::endl;
+        }
     }
 
     if (size_of_stack_frame < -2047)
@@ -328,7 +394,16 @@ void Visit(const koopa_raw_binary_t &binary, const koopa_raw_value_t &value, con
             lhs_reg = reg_stack.top();
             reg_stack.pop();
             lhs = std::to_string(stack_map[binary.lhs]);
-            std::cout << std::setw(6) << "lw " << lhs_reg << ", " << lhs << "(sp)" << std::endl;
+            if (stack_map[binary.lhs] > 2047)
+            {
+                std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[binary.lhs] << std::endl;
+                std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+                std::cout << std::setw(6) << "lw" << lhs_reg << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+            }
+            else
+            {
+                std::cout << std::setw(6) << "lw " << lhs_reg << ", " << lhs << "(sp)" << std::endl;
+            }
             lhs = lhs_reg;
         }
         else
@@ -352,7 +427,16 @@ void Visit(const koopa_raw_binary_t &binary, const koopa_raw_value_t &value, con
             rhs_reg = reg_stack.top();
             reg_stack.pop();
             rhs = std::to_string(stack_map[binary.rhs]);
-            std::cout << std::setw(6) << "lw " << rhs_reg << ", " << rhs << "(sp)" << std::endl;
+            if (stack_map[binary.rhs] > 2047)
+            {
+                std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[binary.rhs] << std::endl;
+                std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+                std::cout << std::setw(6) << "lw" << rhs_reg << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+            }
+            else
+            {
+                std::cout << std::setw(6) << "lw " << rhs_reg << ", " << rhs << "(sp)" << std::endl;
+            }
             rhs = rhs_reg;
         }
         else
@@ -486,8 +570,16 @@ void Visit(const koopa_raw_binary_t &binary, const koopa_raw_value_t &value, con
         break;
     };
 
-    std::cout << std::setw(6) << "sw" << reg << ", " << stack_map[value] << "(sp)" << std::endl;
-
+    if (stack_map[value] > 2047)
+    {
+        std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[value] << std::endl;
+        std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+        std::cout << std::setw(6) << "sw" << reg << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+    }
+    else
+    {
+        std::cout << std::setw(6) << "sw" << reg << ", " << stack_map[value] << "(sp)" << std::endl;
+    }
     if (!lhs_is_integer && stack_map[binary.lhs] >= 0)
         reg_stack.push(lhs);
     if (!rhs_is_integer && stack_map[binary.rhs] >= 0)
@@ -499,22 +591,76 @@ void Visit(const koopa_raw_binary_t &binary, const koopa_raw_value_t &value, con
 // store指令
 void Visit(const koopa_raw_store_t &store)
 {
+    if (store.value->kind.tag == KOOPA_RVT_AGGREGATE)
+    {
+        store_array(store.value, stack_map[store.dest] + 4);
+        return;
+    }
+
     std::string reg;
+    bool reg_push = true;
     if (reg_stack.empty())
         assert(false);
     reg = reg_stack.top();
     reg_stack.pop();
     bool value_is_imm = store.value->kind.tag == KOOPA_RVT_INTEGER;
     if (value_is_imm)
+    {
         std::cout << std::setw(6) << "li" << reg << ", " << store.value->kind.data.integer.value << std::endl;
+    }
+    else if (store.value->kind.tag == KOOPA_RVT_ZERO_INIT)
+    {
+        if (store.dest->ty->tag == KOOPA_RTT_POINTER && store.dest->ty->data.pointer.base->tag == KOOPA_RTT_ARRAY)
+        {
+            int offset = stack_map[store.dest] + 4;
+            if (reg_stack.empty())
+                assert(false);
+            std::string base_reg = reg_stack.top();
+            reg_stack.pop();
+            std::cout << std::setw(6) << "mv" << base_reg << ", " << "sp" << std::endl;
+            for (size_t i = 0; i < cal_array_length(*store.dest->ty->data.pointer.base); i++)
+            {
+                if (offset > 2047)
+                {
+                    if (reg_stack.empty())
+                        assert(false);
+                    std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << offset << std::endl;
+                    std::cout << std::setw(6) << "add" << base_reg << ", " << base_reg << ", " << reg_stack.top() << std::endl;
+                    offset = 0;
+                }
+                std::cout << std::setw(6) << "sw" << "x0" << ", " << offset << "(" << base_reg << ")" << std::endl;
+                offset += 4;
+            }
+            reg_stack.push(base_reg);
+            return;
+        }
+        else
+        {
+            reg_stack.push(reg);
+            reg_push = false;
+            reg = "x0";
+        }
+    }
     else if (stack_map[(koopa_raw_value_t)(store.value)] >= 0)
     {
-        std::cout << std::setw(6) << "lw" << reg << ", " << stack_map[(koopa_raw_value_t)(store.value)] << "(sp)" << std::endl;
+        if (stack_map[store.value] > 2047)
+        {
+            std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[store.value] << std::endl;
+            std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+            std::cout << std::setw(6) << "lw" << reg << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+        }
+        else
+        {
+            std::cout << std::setw(6) << "lw" << reg << ", " << stack_map[store.value] << "(sp)" << std::endl;
+        }
     }
     else
     {
-        reg = "a" + std::to_string(stack_map[(koopa_raw_value_t)(store.value)] + 10);
+        reg_stack.push(reg);
+        reg_push = false;
+        reg = "a" + std::to_string(stack_map[store.value] + 10);
     }
+
     if (store.dest->kind.tag == KOOPA_RVT_GLOBAL_ALLOC)
     {
         std::cout << std::setw(6) << "la" << reg_stack.top() << ", " << store.dest->name + 1 << std::endl;
@@ -522,9 +668,23 @@ void Visit(const koopa_raw_store_t &store)
     }
     else
     {
-        std::cout << std::setw(6) << "sw" << reg << ", " << stack_map[(koopa_raw_value_t)(store.dest)] << "(sp)" << std::endl;
+        if (stack_map[store.dest] > 2047)
+        {
+            std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[store.dest] << std::endl;
+            std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+            std::cout << std::setw(6) << "lw" << reg_stack.top() << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+        }
+        else
+        {
+            std::cout << std::setw(6) << "lw" << reg_stack.top() << ", " << stack_map[store.dest] << "(sp)" << std::endl;
+        }
+        std::cout << std::setw(6) << "sw" << reg << ", " << 0 << '(' << reg_stack.top() << ')' << std::endl;
     }
-    reg_stack.push(reg);
+
+    if (reg_push)
+    {
+        reg_stack.push(reg);
+    }
 }
 
 // load指令
@@ -542,9 +702,29 @@ void Visit(const koopa_raw_load_t &load, const koopa_raw_value_t &value)
     }
     else
     {
-        std::cout << std::setw(6) << "lw" << reg << ", " << stack_map[load.src] << "(sp)" << std::endl;
+        if (stack_map[load.src] > 2047)
+        {
+            std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[load.src] << std::endl;
+            std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+            std::cout << std::setw(6) << "lw" << reg << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+        }
+        else
+        {
+            std::cout << std::setw(6) << "lw" << reg << ", " << stack_map[load.src] << "(sp)" << std::endl;
+        }
+        std::cout << std::setw(6) << "lw" << reg << ", " << 0 << '(' << reg << ')' << std::endl;
     }
-    std::cout << std::setw(6) << "sw" << reg << ", " << stack_map[value] << "(sp)" << std::endl;
+
+    if (stack_map[value] > 2047)
+    {
+        std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[value] << std::endl;
+        std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+        std::cout << std::setw(6) << "sw" << reg << ", " << 0 << '(' << reg_stack.top() << ')' << std::endl;
+    }
+    else
+    {
+        std::cout << std::setw(6) << "sw" << reg << ", " << stack_map[value] << "(sp)" << std::endl;
+    }
     reg_stack.push(reg);
 }
 
@@ -555,7 +735,9 @@ void Visit(const koopa_raw_branch_t &branch)
     {
         assert(false);
     }
+    bool reg_push = true;
     std::string reg = reg_stack.top();
+    reg_stack.pop();
     if (branch.cond->kind.tag == KOOPA_RVT_INTEGER)
     {
         std::cout << std::setw(6) << "li" << reg << ", " << branch.cond->kind.data.integer.value << std::endl;
@@ -564,16 +746,31 @@ void Visit(const koopa_raw_branch_t &branch)
     {
         if (stack_map[branch.cond] >= 0)
         {
-            std::cout << std::setw(6) << "lw" << reg << ", " << stack_map[branch.cond] << "(sp)" << std::endl;
+            if (stack_map[branch.cond] > 2047)
+            {
+                std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[branch.cond] << std::endl;
+                std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+                std::cout << std::setw(6) << "lw" << reg << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+            }
+            else
+            {
+                std::cout << std::setw(6) << "lw" << reg << ", " << stack_map[branch.cond] << "(sp)" << std::endl;
+            }
         }
         else
         {
             reg = "a" + std::to_string(stack_map[branch.cond] + 10);
+            reg_push = false;
         }
     }
 
     std::cout << std::setw(6) << "beqz" << reg << ", " << func_name + '_' << branch.false_bb->name + 1 << std::endl;
     std::cout << std::setw(6) << "j" << func_name + '_' << branch.true_bb->name + 1 << std::endl;
+
+    if (reg_push)
+    {
+        reg_stack.push(reg);
+    }
 }
 
 void Visit(const koopa_raw_jump_t &jump)
@@ -585,13 +782,17 @@ void Visit(const koopa_raw_jump_t &jump)
 void Visit(const koopa_raw_call_t &call, const koopa_raw_value_t &fa_value)
 {
     std::stack<std::string> regs;
+    for (size_t i = 0; i < 8; i++)
+    {
+        save_regs("a" + std::to_string(i));
+        regs.push("a" + std::to_string(i));
+    }
+
     for (int i = 0; i < call.args.len; i++)
     {
         koopa_raw_value_t value = (koopa_raw_value_t)(call.args.buffer[i]);
         if (i < 8)
         {
-            save_regs("a" + std::to_string(i));
-            regs.push("a" + std::to_string(i));
             switch (value->kind.tag)
             {
             case KOOPA_RVT_INTEGER:
@@ -600,7 +801,16 @@ void Visit(const koopa_raw_call_t &call, const koopa_raw_value_t &fa_value)
             default:
                 if (stack_map[value] >= 0)
                 {
-                    std::cout << std::setw(6) << "lw" << 'a' << i << ", " << stack_map[value] << "(sp)" << std::endl;
+                    if (stack_map[value] > 2047)
+                    {
+                        std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[value] << std::endl;
+                        std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+                        std::cout << std::setw(6) << "lw" << 'a' << i << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << std::setw(6) << "lw" << 'a' << i << ", " << stack_map[value] << "(sp)" << std::endl;
+                    }
                 }
                 else
                 {
@@ -612,6 +822,7 @@ void Visit(const koopa_raw_call_t &call, const koopa_raw_value_t &fa_value)
         else
         {
             std::string reg = reg_stack.top();
+            reg_stack.pop();
             switch (value->kind.tag)
             {
             case KOOPA_RVT_INTEGER:
@@ -619,10 +830,23 @@ void Visit(const koopa_raw_call_t &call, const koopa_raw_value_t &fa_value)
                 std::cout << std::setw(6) << "sw" << reg << ", " << 4 * (i - 8) << "(sp)" << std::endl;
                 break;
             default:
-                std::cout << std::setw(6) << "lw" << reg << ", " << stack_map[value] << "(sp)" << std::endl;
+                if (stack_map[value] > 2047)
+                {
+                    std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[value] << std::endl;
+                    std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+                    std::cout << std::setw(6) << "lw" << reg << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+                }
+                else
+                {
+                    std::cout << std::setw(6) << "lw" << reg << ", " << stack_map[value] << "(sp)" << std::endl;
+                }
+
+                assert(4 * (i - 8) < 2047);
+
                 std::cout << std::setw(6) << "sw" << reg << ", " << 4 * (i - 8) << "(sp)" << std::endl;
                 break;
             }
+            reg_stack.push(reg);
         }
     }
     std::cout << std::setw(6) << "call" << call.callee->name + 1 << std::endl;
@@ -630,7 +854,16 @@ void Visit(const koopa_raw_call_t &call, const koopa_raw_value_t &fa_value)
     if (call.callee->ty->data.function.ret->tag != KOOPA_RTT_UNIT)
     {
         // std::cerr << call.callee->ty->tag << std::endl;
-        std::cout << std::setw(6) << "sw" << "a0, " << stack_map[fa_value] << "(sp)" << std::endl;
+        if (stack_map[fa_value] > 2047)
+        {
+            std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[fa_value] << std::endl;
+            std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+            std::cout << std::setw(6) << "sw" << 'a' << 0 << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+        }
+        else
+        {
+            std::cout << std::setw(6) << "sw" << 'a' << 0 << ", " << stack_map[fa_value] << "(sp)" << std::endl;
+        }
     }
 
     while (!regs.empty())
@@ -650,12 +883,246 @@ void Visit(const koopa_raw_global_alloc_t &global_alloc, const koopa_raw_value_t
         std::cout << ".word " << global_alloc.init->kind.data.integer.value << std::endl;
         break;
     case KOOPA_RVT_ZERO_INIT:
-        std::cout << ".zero 4" << std::endl;
+        if (global_alloc.init->ty->tag == KOOPA_RTT_ARRAY)
+        {
+            std::cout << ".zero " << cal_array_length(*global_alloc.init->ty) * 4 << std::endl;
+        }
+        else
+        {
+            std::cout << ".zero 4" << std::endl;
+        }
         break;
+    case KOOPA_RVT_AGGREGATE:
+    {
+        std::list<int32_t> init_list;
+        koopa_raw_aggregate_t _aggregate = global_alloc.init->kind.data.aggregate;
+        analysis_aggregate(_aggregate, init_list);
+        int zero_count = 0;
+        bool zero_flag = false;
+        for (auto i : init_list)
+        {
+            if (i == 0)
+            {
+                zero_flag = true;
+                zero_count++;
+            }
+            else
+            {
+                if (zero_flag)
+                {
+                    std::cout << ".zero " << zero_count * 4 << std::endl;
+                    zero_flag = false;
+                    zero_count = 0;
+                }
+                std::cout << ".word " << i << std::endl;
+            }
+        }
+        if (zero_flag)
+        {
+            std::cout << ".zero " << zero_count * 4 << std::endl;
+            zero_flag = false;
+            zero_count = 0;
+        }
+        break;
+    }
+
     default:
         std::cerr << global_alloc.init->kind.tag << std::endl;
         assert(false);
     }
+}
+
+// 访问 get_elem_ptr 指令
+void Visit(const koopa_raw_get_elem_ptr_t &get_elem_ptr, const koopa_raw_value_t &value)
+{
+    bool reg_push = true;
+    auto src_reg = reg_stack.top();
+    reg_stack.pop();
+    std::string index_reg = reg_stack.top();
+    std::string reg_to_push = "";
+    reg_stack.pop();
+    if (get_elem_ptr.src->kind.tag == KOOPA_RVT_GLOBAL_ALLOC)
+    {
+        std::cout << std::setw(6) << "la" << src_reg << ", " << get_elem_ptr.src->name + 1 << std::endl;
+    }
+    else
+    {
+        if (stack_map[get_elem_ptr.src] >= 0)
+        {
+            if (stack_map[get_elem_ptr.src] > 2047)
+            {
+                std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[get_elem_ptr.src] << std::endl;
+                std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+                std::cout << std::setw(6) << "lw" << src_reg << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+            }
+            else
+            {
+                std::cout << std::setw(6) << "lw" << src_reg << ", " << stack_map[get_elem_ptr.src] << "(sp)" << std::endl;
+            }
+        }
+        else
+        {
+            std::cout << std::setw(6) << "mv" << src_reg << ", a" << stack_map[get_elem_ptr.src] + 10 << std::endl;
+        }
+    }
+
+    if (get_elem_ptr.index->kind.tag == KOOPA_RVT_INTEGER)
+    {
+        std::cout << std::setw(6) << "li" << index_reg << ", " << get_elem_ptr.index->kind.data.integer.value * cal_array_length(*get_elem_ptr.src->ty->data.array.base->data.array.base) << std::endl;
+        std::cout << std::setw(6) << "slli" << reg_stack.top() << ", " << index_reg << ", 2" << std::endl;
+    }
+    else
+    {
+
+        if (stack_map[get_elem_ptr.index] >= 0)
+        {
+            if (stack_map[get_elem_ptr.index] > 2047)
+            {
+                std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[get_elem_ptr.index] << std::endl;
+                std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+                std::cout << std::setw(6) << "lw" << index_reg << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+            }
+            else
+            {
+                std::cout << std::setw(6) << "lw" << index_reg << ", " << stack_map[get_elem_ptr.index] << "(sp)" << std::endl;
+            }
+            std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << cal_array_length(*get_elem_ptr.src->ty->data.array.base->data.array.base) << std::endl;
+            std::cout << std::setw(6) << "mul" << index_reg << ", " << index_reg << ", " << reg_stack.top() << std::endl;
+            std::cout << std::setw(6) << "slli" << reg_stack.top() << ", " << index_reg << ", 2" << std::endl;
+        }
+        else
+        {
+            reg_to_push = index_reg;
+            index_reg = "a" + std::to_string(stack_map[get_elem_ptr.index] + 10);
+            reg_push = false;
+            std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << cal_array_length(*get_elem_ptr.src->ty->data.array.base->data.array.base) << std::endl;
+            std::cout << std::setw(6) << "mul" << index_reg << ", " << index_reg << ", " << reg_stack.top() << std::endl;
+            std::cout << std::setw(6) << "slli" << reg_stack.top() << ", " << index_reg << ", 2" << std::endl;
+        }
+    }
+
+    std::cout << std::setw(6) << "add" << src_reg << ", " << src_reg << ", " << reg_stack.top() << std::endl;
+    if (stack_map[value] > 2047)
+    {
+        std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[value] << std::endl;
+        std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+        std::cout << std::setw(6) << "sw" << src_reg << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+    }
+    else
+    {
+        std::cout << std::setw(6) << "sw" << src_reg << ", " << stack_map[value] << "(sp)" << std::endl;
+    }
+    if (reg_push)
+    {
+        reg_stack.push(index_reg);
+    }else{
+        reg_stack.push(reg_to_push);
+    }
+    reg_stack.push(src_reg);
+}
+
+// 访问 get_ptr 指令
+void Visit(const koopa_raw_get_ptr_t &get_ptr, const koopa_raw_value_t &value)
+{
+    // std::string reg;
+    // if (reg_stack.empty())
+    //     assert(false);
+    // reg = reg_stack.top();
+    // reg_stack.pop();
+    // if (get_ptr.src->kind.tag == KOOPA_RVT_GLOBAL_ALLOC)
+    // {
+    //     std::cout << std::setw(6) << "la" << reg << ", " << get_ptr.src->name + 1 << std::endl;
+    // }
+    // else
+    // {
+    //     std::cout << std::setw(6) << "lw" << reg << ", " << stack_map[get_ptr.src] << "(sp)" << std::endl;
+    // }
+    // std::cout << std::setw(6) << "addi" << reg << ", " << reg << ", " << get_ptr.index->kind.data.integer.value * cal_array_length(*get_ptr.src->ty->data.pointer.base) * 4 << std::endl;
+    // std::cout << std::setw(6) << "sw" << reg << ", " << stack_map[value] << "(sp)" << std::endl;
+    // reg_stack.push(reg);
+    bool reg_push = true;
+    auto src_reg = reg_stack.top();
+    reg_stack.pop();
+    std::string index_reg = reg_stack.top();
+    std::string reg_to_push = "";
+    reg_stack.pop();
+    if (get_ptr.src->kind.tag == KOOPA_RVT_GLOBAL_ALLOC)
+    {
+        std::cout << std::setw(6) << "la" << src_reg << ", " << get_ptr.src->name + 1 << std::endl;
+    }
+    else
+    {
+        if (stack_map[get_ptr.src] >= 0)
+        {
+            if (stack_map[get_ptr.src] > 2047)
+            {
+                std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[get_ptr.src] << std::endl;
+                std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+                std::cout << std::setw(6) << "lw" << src_reg << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+            }
+            else
+            {
+                std::cout << std::setw(6) << "lw" << src_reg << ", " << stack_map[get_ptr.src] << "(sp)" << std::endl;
+            }
+        }
+        else
+        {
+            std::cout << std::setw(6) << "mv" << src_reg << ", a" << stack_map[get_ptr.src] + 10 << std::endl;
+        }
+    }
+
+    if (get_ptr.index->kind.tag == KOOPA_RVT_INTEGER)
+    {
+        std::cout << std::setw(6) << "li" << index_reg << ", " << get_ptr.index->kind.data.integer.value * cal_array_length(*get_ptr.src->ty->data.pointer.base) << std::endl;
+        std::cout << std::setw(6) << "slli" << reg_stack.top() << ", " << index_reg << ", 2" << std::endl;
+    }
+    else
+    {
+
+        if (stack_map[get_ptr.index] >= 0)
+        {
+            if (stack_map[get_ptr.index] > 2047)
+            {
+                std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[get_ptr.index] << std::endl;
+                std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+                std::cout << std::setw(6) << "lw" << index_reg << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+            }
+            else
+            {
+                std::cout << std::setw(6) << "lw" << index_reg << ", " << stack_map[get_ptr.index] << "(sp)" << std::endl;
+            }
+            std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << cal_array_length(*get_ptr.src->ty->data.array.base) << std::endl;
+            std::cout << std::setw(6) << "mul" << index_reg << ", " << index_reg << ", " << reg_stack.top() << std::endl;
+            std::cout << std::setw(6) << "slli" << reg_stack.top() << ", " << index_reg << ", 2" << std::endl;
+        }
+        else
+        {
+            reg_to_push = index_reg;
+            reg_push = false;
+            index_reg = "a" + std::to_string(stack_map[get_ptr.index] + 10);
+            std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << cal_array_length(*get_ptr.src->ty->data.array.base) << std::endl;
+            std::cout << std::setw(6) << "mul" << index_reg << ", " << index_reg << ", " << reg_stack.top() << std::endl;
+            std::cout << std::setw(6) << "slli" << reg_stack.top() << ", " << index_reg << ", 2" << std::endl;
+        }
+    }
+    std::cout << std::setw(6) << "add" << src_reg << ", " << src_reg << ", " << reg_stack.top() << std::endl;
+    if (stack_map[value] > 2047)
+    {
+        std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << stack_map[value] << std::endl;
+        std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+        std::cout << std::setw(6) << "sw" << src_reg << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+    }
+    else
+    {
+        std::cout << std::setw(6) << "sw" << src_reg << ", " << stack_map[value] << "(sp)" << std::endl;
+    }
+    if (reg_push)
+    {
+        reg_stack.push(index_reg);
+    }else{
+        reg_stack.push(reg_to_push);
+    }
+    reg_stack.push(src_reg);
 }
 
 void save_regs(std::string reg)
@@ -663,7 +1130,16 @@ void save_regs(std::string reg)
     int count = reg[1] - '0';
     if (reg[0] == 'a')
     {
-        std::cout << std::setw(6) << "sw" << reg << ", " << -size_of_stack_frame - 84 - count * 4 << "(sp)" << std::endl;
+        if (-size_of_stack_frame - 84 - count * 4 > 2047)
+        {
+            std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << -size_of_stack_frame - 84 - count * 4 << std::endl;
+            std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+            std::cout << std::setw(6) << "sw" << reg << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+        }
+        else
+        {
+            std::cout << std::setw(6) << "sw" << reg << ", " << -size_of_stack_frame - 84 - count * 4 << "(sp)" << std::endl;
+        }
     }
 }
 
@@ -672,6 +1148,91 @@ void restore_regs(std::string reg)
     int count = reg[1] - '0';
     if (reg[0] == 'a')
     {
-        std::cout << std::setw(6) << "lw" << reg << ", " << -size_of_stack_frame - 84 - count * 4 << "(sp)" << std::endl;
+        if (-size_of_stack_frame - 84 - count * 4 > 2047)
+        {
+            std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << -size_of_stack_frame - 84 - count * 4 << std::endl;
+            std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+            std::cout << std::setw(6) << "lw" << reg << ", " << 0 << "(" + reg_stack.top() + ")" << std::endl;
+        }
+        else
+        {
+            std::cout << std::setw(6) << "lw" << reg << ", " << -size_of_stack_frame - 84 - count * 4 << "(sp)" << std::endl;
+        }
+    }
+}
+
+int cal_array_length(const koopa_raw_type_kind &base)
+{
+    if (base.tag == KOOPA_RTT_INT32)
+    {
+        return 1;
+    }
+    else
+    {
+        int length = 0;
+        length = cal_array_length(*base.data.array.base) * base.data.array.len;
+        return length;
+    }
+}
+
+int cal_aggregate_length(const koopa_raw_value_t value)
+{
+    int length = 0;
+    if (value->kind.tag == KOOPA_RVT_INTEGER)
+    {
+        return 4;
+    }
+    else
+    {
+        for (size_t i = 0; i < value->kind.data.aggregate.elems.len; i++)
+        {
+            length += cal_aggregate_length((koopa_raw_value_t)(value->kind.data.aggregate.elems.buffer[i]));
+        }
+    }
+    return length;
+}
+
+void analysis_aggregate(const koopa_raw_aggregate_t &aggregate, std::list<int32_t> &init_list)
+{
+    for (size_t i = 0; i < aggregate.elems.len; i++)
+    {
+        koopa_raw_value_t value = (koopa_raw_value_t)(aggregate.elems.buffer[i]);
+        if (value->kind.tag == KOOPA_RVT_INTEGER)
+        {
+            init_list.push_back(value->kind.data.integer.value);
+        }
+        else
+        {
+            analysis_aggregate(value->kind.data.aggregate, init_list);
+        }
+    }
+}
+
+void store_array(const koopa_raw_value_t &value, int offset)
+{
+    if (value->kind.tag == KOOPA_RVT_AGGREGATE)
+    {
+        for (int i = 0; i < value->kind.data.aggregate.elems.len; i++)
+        {
+            store_array((koopa_raw_value_t)(value->kind.data.aggregate.elems.buffer[i]), offset + i * cal_aggregate_length((koopa_raw_value_t)(value->kind.data.aggregate.elems.buffer[i])));
+        }
+    }
+    else
+    {
+        auto reg = reg_stack.top();
+        reg_stack.pop();
+        std::cout << std::setw(6) << "li" << reg << ',' << value->kind.data.integer.value << std::endl;
+        if (offset > 2047)
+        {
+            std::cout << std::setw(6) << "li" << reg_stack.top() << ", " << offset << std::endl;
+            std::cout << std::setw(6) << "add" << reg_stack.top() << ", " << reg_stack.top() << ", " << "sp" << std::endl;
+            std::cout << std::setw(6) << "sw" << reg << ',' << 0 << '(' << reg_stack.top() << ')' << std::endl;
+        }
+        else
+        {
+
+            std::cout << std::setw(6) << "sw" << reg << ',' << offset << "(sp)" << std::endl;
+        }
+        reg_stack.push(reg);
     }
 }
